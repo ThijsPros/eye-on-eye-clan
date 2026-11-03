@@ -241,6 +241,7 @@ th{color:#CFDcf8;background:#0F2A66}th:first-child{border-top-left-radius:9px}th
 .tablebox.plat th{background:rgb(0 0 0/.22)}
 tbody tr:hover td{background:rgb(255 255 255/.05)}
 .naam{color:#fff}.naam:hover{color:var(--gold);text-decoration:underline}
+a.knop{text-decoration:none;display:inline-block}
 .knop{background:linear-gradient(180deg,#FFD65A,#F2A71B);color:#3A2600;font-weight:700;border-radius:9px;padding:9px 16px;box-shadow:inset 0 2px 0 rgb(255 255 255/.5),0 3px 0 #9A6400}
 .knop.licht{background:linear-gradient(180deg,#3F78DE,#2558B8);color:#fff;box-shadow:inset 0 2px 0 rgb(255 255 255/.28),0 3px 0 #123676}
 .knop:active{transform:translateY(2px);box-shadow:0 1px 0 #123676}
@@ -499,7 +500,7 @@ function letOp(){const ing=D.players.filter(p=>K(p).plek!=null),m=[],n=l=>l.map(
 function keuzeRijen(){const z=oorlogZoek;return D.players.filter(p=>!z||p.naam.toLowerCase().includes(z)).sort((a,b)=>(K(a).plek??1e9)-(K(b).plek??1e9)||a.naam.localeCompare(b.naam,"nl")).map(p=>`<tr><td><div class="speler">${schild(p.inClan?clanVan(p.clanTag)?.nr:0,20)}<button class="naam sn" data-speler="${pid(p)}">${esc(p.naam)}</button></div></td><td>${keuzeSelect(p,"appgroep",["Ja","Nee"])}</td><td>${keuzeSelect(p,"aanmelding",["Ja","Nee"])}</td><td>${keuzeSelect(p,"keuze",KEUZES)}</td><td class="opt">${esc(plekNaam(K(p).plek))||'<span class="weg">Reserve</span>'}</td></tr>`).join("")}
 function opstellingView(){const bezet={};D.players.forEach(p=>{if(K(p).plek!=null)bezet[K(p).plek]=p});
  const res=D.players.filter(p=>K(p).plek==null);
- const knoppen=bewerk?`<button class="knop" data-actie="opslaan"${gewijzigd?"":" disabled"}>Wijzigingen opslaan${gewijzigd?` (${gewijzigd})`:""}</button><button class="knop licht" data-actie="stop">Stop met bewerken</button><button class="knop licht" data-actie="vergeet">Sleutel vergeten</button>`:`<button class="knop" data-kopieer="opsttekst">Kopieer voor de appgroep</button><button class="knop licht" data-actie="bewerk">Opstelling bewerken</button>`;
+ const knoppen=bewerk?`<button class="knop" data-actie="opslaan"${gewijzigd?"":" disabled"}>Wijzigingen opslaan${gewijzigd?` (${gewijzigd})`:""}</button><button class="knop licht" data-actie="stop">Stop met bewerken</button><button class="knop licht" data-actie="vergeet">Sleutel vergeten</button>`:`<a class="knop" href="https://wa.me/?text=${encodeURIComponent(opstellingTekst())}" target="_blank" rel="noopener">Deel in WhatsApp</a><button class="knop licht" data-kopieer="opsttekst">Kopieer voor de appgroep</button><button class="knop licht" data-actie="bewerk">Opstelling bewerken</button>`;
  return `<section class="sectie"><h2>Opstelling CWL</h2><div class="tools">${knoppen}<span class="teller" id="opslagmelding" role="status">${esc(opslagMelding)}</span></div>
  <div id="sleutelform" hidden class="sleutel"><label for="sleutel">GitHub-sleutel met schrijfrecht op de clan-repository</label><div class="tools"><input id="sleutel" type="password" autocomplete="off"><button class="knop" data-actie="sleutel">Start met bewerken</button></div><p class="uitleg">De sleutel blijft in deze browser en gaat alleen naar GitHub.</p></div>
  <textarea id="opsttekst" hidden readonly>${esc(opstellingTekst())}</textarea>${letOp()}
@@ -568,7 +569,7 @@ function berichten(){const uit=[];
  if(top.length)uit.push(["Groeiers van de maand",`📈 Grootste groei deze maand\n${top.map(([p,g],i)=>`${i+1}. ${p.naam} (+${g})`).join("\n")}`]);
  return uit}
 function berichtenView(){const b=berichten();
- return `<section class="sectie"><h2>Berichten voor de appgroep</h2>${b.length?`<div class="berichten">${b.map(([t,x],i)=>`<article class="bericht"><h3>${esc(t)}</h3><textarea id="b${i}" rows="${Math.min(x.split("\n").length+1,16)}" readonly aria-label="${esc(t)}">${esc(x)}</textarea><button class="knop" data-kopieer="b${i}">Kopieer bericht</button></article>`).join("")}</div>`:'<p class="uitleg">Er zijn nu geen berichten om te delen.</p>'}</section>`}
+ return `<section class="sectie"><h2>Berichten voor de appgroep</h2>${b.length?`<div class="berichten">${b.map(([t,x],i)=>`<article class="bericht"><h3>${esc(t)}</h3><textarea id="b${i}" rows="${Math.min(x.split("\n").length+1,16)}" readonly aria-label="${esc(t)}">${esc(x)}</textarea><div class="tools"><a class="knop" href="https://wa.me/?text=${encodeURIComponent(x)}" target="_blank" rel="noopener">Deel in WhatsApp</a><button class="knop licht" data-kopieer="b${i}">Kopieer bericht</button></div></article>`).join("")}</div>`:'<p class="uitleg">Er zijn nu geen berichten om te delen.</p>'}</section>`}
 
 function route(){const h=decodeURIComponent(location.hash.slice(1));if(h.startsWith("speler/")){spelerTag=h.slice(7);tab="speler";return}tab=TABS.some(x=>x[0]===h)?h:"overzicht"}
 function nav(){const actief=tab==="speler"?"spelers":tab;$("nav").innerHTML=TABS.map(([k,t])=>`<button data-tab="${k}"${actief===k?' aria-current="page"':""}>${t}</button>`).join("")}
