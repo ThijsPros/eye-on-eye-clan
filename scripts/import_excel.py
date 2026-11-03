@@ -121,6 +121,7 @@ def lees(pad, clan, uit):
                 s["war"] = {
                     "aanv": heel(r.get("Attack: count")), "gem": getal(r.get("Attack: Average Stars")),
                     "drie": getal(r.get("Attack: % of 3 Stars")), "gemist": heel(r.get("Attack: Miss attacks")),
+                    "laatsteOorlog": str(r["Date last war"])[:10] if r.get("Date last war") else None,
                     "verd": heel(r.get("Defense: count")), "verdGem": getal(r.get("Defense: Average Stars")),
                     "verdDrie": getal(r.get("Defense: % of 3 Stars")),
                 }

@@ -382,6 +382,7 @@ def backfill(clans, history):
     if history.get("ckDatum") == today:
         return
     first = history.setdefault("eerst", {})
+    laatst = history.setdefault("laatst", {})
     cutoff = NOW - timedelta(days=max(CONFIG["venster_dagen"] + 35, CONFIG["maand_venster_dagen"] + 10))
     complete = True
     for clan in clans:
@@ -401,6 +402,7 @@ def backfill(clans, history):
                 date = to_date(war["startTime"])
                 for member in side.get("members", []):
                     first[member["tag"]] = min(first.get(member["tag"], date), date)
+                    laatst[member["tag"]] = max(laatst.get(member["tag"], date), date)
         archive_add(tag, list(wars) + [w for w in older if w.get("endTime") not in known])
         wars = [w for w in wars if w.get("state") == "warEnded" and w.get("startTime")]
         results = history.setdefault("uitslagen", {}).setdefault(tag, {})
@@ -422,6 +424,7 @@ def backfill(clans, history):
             date = to_date(war["startTime"])
             for member in side.get("members", []):
                 first[member["tag"]] = min(first.get(member["tag"], date), date)
+                laatst[member["tag"]] = max(laatst.get(member["tag"], date), date)
             if parse_time(war["startTime"]) < cutoff:
                 continue
             stored = read_json(WARS / (normalized_id + ".json"), None)
@@ -551,6 +554,24 @@ def basis_inpassen(history):
             series[maand] = vol[:3] + [vol[3] or None]
     history["maanden"] = sorted({*history["maanden"], *basis["maanden"]})
     return basis["spelers"]
+
+
+def laatst_bijwerken(history, basis, wars, in_clan):
+    """Laatste datum waarop iemand bij ons bekend was: Excel, oorlog of lidmaatschap."""
+    laatst = history.setdefault("laatst", {})
+    def zet(tag, datum):
+        if datum and datum > laatst.get(tag, ""):
+            laatst[tag] = datum
+    for tag, maanden in basis.items():
+        for maand, r in maanden.items():
+            zet(tag, maand + "-01")
+            zet(tag, r.get("laatsteOorlog"))
+    for war in wars:
+        if war["status"] != "preparation" and war.get("start"):
+            for member in war["leden"]:
+                zet(member["tag"], to_date(war["start"]))
+    for tag in in_clan:
+        zet(tag, NOW.strftime("%Y-%m-%d"))
 
 
 def stand_bijwerken(series, month, earlier, current, stale=False):
@@ -785,6 +806,7 @@ def main():
     earlier = labels[labels.index(month) - 1] if labels.index(month) else None
 
     clan_tags = {c["tag"] for c in clans}
+    laatst_bijwerken(history, basis, wars, [t for t, p in players.items() if p.get("clanTag") in clan_tags])
     moves = history.setdefault("clans", {})
     output = []
     for tag, player in players.items():
@@ -810,6 +832,7 @@ def main():
             player["vorigeClan"], player["overstap"] = move["vorige"], move["sinds"]
         player["d"] = growth
         player["dl"] = league_wissel
+        player["laatst"] = history["laatst"].get(tag)
         player["s"] = [series.get(m) for m in labels]
         player["cw"] = stats.get(tag)
         output.append(player)
