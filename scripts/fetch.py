@@ -716,16 +716,19 @@ def ranked_bijwerken(players, raws, leden, clan_tags):
         momenten = [int(parse_time(b["battleTimestamp"]).timestamp()) for b in log if b.get("battleTimestamp")]
         oudste = min(momenten) if momenten else nu
         for b, moment in zip((b for b in log if b.get("battleTimestamp")), momenten):
-            if not b.get("attack") or b.get("battleType") not in ("ranked", "legend"):
+            if b.get("battleType") not in ("ranked", "legend") or (not b.get("attack") and b["battleType"] != "legend"):
                 continue
             week = str(RANKED_START + (moment - RANKED_START) // RANKED_WEEK * RANKED_WEEK)
             regel = weken.setdefault(week, {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
-            regel["aanv"][str(moment)] = [b.get("stars", 0), b.get("destructionPercentage", 0)]
+            soort = "aanv" if b.get("attack") else "verd"
+            regel.setdefault(soort, {})[str(moment)] = [b.get("stars", 0), b.get("destructionPercentage", 0)]
         regel = weken.setdefault(week_nu, {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
         groep = raw.get("currentLeagueGroupTag")
         regel.update(naam=player["naam"], clan=player.get("clanTag"), lgn=player["lgn"] or None, league=player["league"],
                      groep=bool(groep and groep != "#0"), trofeeen=player.get("trofeeen"))
         regel.setdefault("lgnStart", player["lgn"] or None)
+        if player["league"] == "Legend I":  # Legenddag loopt van 05:00 tot 05:00 UTC.
+            regel.setdefault("dagTrofee", {}).setdefault(str((nu - 18000) // 86400), player.get("trofeeen"))
         for week, inhoud in weken.items():
             if tag in inhoud["spelers"] and oudste <= int(week):
                 inhoud["spelers"][tag]["volledig"] = True
