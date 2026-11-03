@@ -1,0 +1,36 @@
+name: Bronnen onderzoeken
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - env:
+          T: ${{ secrets.GH_DISPATCH_TOKEN }}
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          curl -sS -o /dev/null -w "DISPATCH %{http_code}\n" -X POST -H "Authorization: Bearer $T" -H "Accept: application/vnd.github+json" -H "User-Agent: eye-on-eye-clan" https://api.github.com/repos/ThijsPros/eye-on-eye-clan/actions/workflows/update.yml/dispatches -d '{"ref":"main"}'
+          python3 - <<'P'
+          import json,os,urllib.request,urllib.parse,time
+          q=lambda t:urllib.parse.quote(t,safe='')
+          def g(u):
+              for i in range(2):
+                  try: return json.load(urllib.request.urlopen(urllib.request.Request('https://api.clashk.ing'+u,headers={'User-Agent':'eye-on-eye'}),timeout=100))
+                  except Exception as e: err=e
+              print('ERR',u,err)
+          r0=json.load(urllib.request.urlopen(urllib.request.Request('https://cocproxy.royaleapi.dev/v1/clans/%23PYQ2RLCQ/currentwar/leaguegroup',headers={'Authorization':'Bearer '+os.environ['COC_API_KEY']}),timeout=40))
+          print('NU',r0.get('state'),[ [t for t in x['warTags']][:4] for x in r0['rounds']][:4],[c['name'][:10] for c in r0['clans']])
+          for c,se in [('#PYQ2RLCQ','2026-10-02'),('#PYQ2RLCQ','2026-09-01'),('#PYQ2RLCQ','2026-08-02'),('#2RGYGLVC0','2026-10-02'),('#2RGYGLVC0','2026-09-01')]:
+              r=g(f'/cwl/{q(c)}/{se}')
+              if not r: continue
+              R=[[ (w['clan']['tag'],w['opponent']['tag']) for w in rd['warTags']] for rd in r['rounds']]
+              # label: R1-slot*2 + kant
+              lab={}
+              for i,(a,b) in enumerate(R[0]): lab[a]=2*i;lab[b]=2*i+1
+              print('LAB',c,se,[[ (lab[a],lab[b]) for a,b in rd] for rd in R[1:4]])
+              print('ORDER',[lab[x['tag']] for x in r['clans']])
+              time.sleep(.5)
+          P
