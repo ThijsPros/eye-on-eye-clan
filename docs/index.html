@@ -560,12 +560,13 @@ function spelerView(){const tag=spelerTag,z=spelerData[tag];laadSpeler(tag);cons
  ${z.gemist.length?`<div class="paneel"><h3>Gemiste aanvallen</h3><ul class="gemist">${z.gemist.map(g=>`<li>${datum(iso(g.datum))}: ${g.aantal} tegen ${esc(g.tegen)} (${g.soort==="cwl"?"CWL":"CW"})</li>`).join("")}</ul></div>`:""}
  <div class="paneel"><h3>Aanvallen</h3>${aanval?`<div class="tablebox plat"><table><thead><tr><th><span class="kp">Datum</span></th><th class="opt"><span class="kp">Soort</span></th><th class="opt"><span class="kp">Tegen clan</span></th><th><span class="kp">Doel</span></th><th><span class="kp">Resultaat</span></th><th class="n opt"><span class="kp">Tijd</span></th></tr></thead><tbody>${aanval}</tbody></table></div>`:'<p class="uitleg">Geen aanvallen in deze periode.</p>'}</div></section>`}
 function resttekst(doel){const m=Math.max(0,Math.round((doel-Date.now())/6e4));return `${Math.floor(m/60)}u ${String(m%60).padStart(2,"0")}m`}
+const tagNaam=n=>{const p=D.players.find(x=>x.naam===n),w=p&&K(p).whatsapp;return w?"@"+w:n};
 function clanBericht(c){const eigen=D.oorlogen.filter(w=>w.clan.tag===c.tag),bezig=eigen.find(w=>w.status==="inWar"),voor=eigen.find(w=>w.status==="preparation"),klaar=eigen.find(w=>w.status==="warEnded"&&Date.now()-tijd(w.einde)<864e5),w=bezig||klaar||voor;
  if(!w)return null;const r=[`🛡️ *${c.naam}* (${soortNaam(w)})`,`tegen ${w.tegenstander.name}`];
  if(w.status==="preparation")r.push(`⏳ Start over ${resttekst(tijd(w.start))}`);
  else{const o=oordeel(w);r.push(`⭐ *${w.clan.stars??0} - ${w.tegenstander.stars??0}* sterren`,`💥 ${pct(w.clan.destructionPercentage)} - ${pct(w.tegenstander.destructionPercentage)}`,`🗡️ ${w.clan.aanvallen??w.gebruikt}/${w.totaal} aanvallen`);
-  if(w.status==="inWar"){r.push(`⏳ Nog ${resttekst(tijd(w.einde))}, eindigt ${tijd(w.einde).toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})}`);if(o&&o[0]!=="open")r.push(`🏆 ${o[1]}`);r.push(w.open.length?`❗ Nog aanvallen: ${w.open.map(x=>x.naam).join(", ")}`:"✅ Iedereen heeft aangevallen")}
-  else{r.push(`🏁 ${o?o[1]:"Afgelopen"}`);if(w.open.length)r.push(`❌ Niet aangevallen: ${w.open.map(x=>x.naam).join(", ")}`)}}
+  if(w.status==="inWar"){r.push(`⏳ Nog ${resttekst(tijd(w.einde))}, eindigt ${tijd(w.einde).toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})}`);if(o&&o[0]!=="open")r.push(`🏆 ${o[1]}`);r.push(w.open.length?`❗ Nog aanvallen: ${w.open.map(x=>tagNaam(x.naam)).join(", ")}`:"✅ Iedereen heeft aangevallen")}
+  else{r.push(`🏁 ${o?o[1]:"Afgelopen"}`);if(w.open.length)r.push(`❌ Niet aangevallen: ${w.open.map(x=>tagNaam(x.naam)).join(", ")}`)}}
  return r.join("\n")}
 function berichten(){const uit=[],delen=[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(clanBericht).filter(Boolean);
  if(delen.length)uit.push(["Oorlogsupdate",`⚔️ *EYE ON EYE OORLOGSUPDATE* ⚔️\n_${klok(new Date)}_\n\n${delen.join("\n\n")}\n\n📊 https://thijspros.github.io/eye-on-eye-clan/`]);
