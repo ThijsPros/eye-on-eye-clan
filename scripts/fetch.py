@@ -234,6 +234,7 @@ def collect_wars(clan):
                         {
                             "tag": side.get("tag"), "sterren": side.get("stars") or 0, "procent": side.get("destructionPercentage") or 0,
                             "aanvallen": side.get("attacks", sum(len(m.get("attacks", [])) for m in side.get("members", []))),
+                            "max": side_maximum(side, war.get("teamSize") or 0),
                             "verdeling": [
                                 sum(a["stars"] == stars for m in side.get("members", []) for a in m.get("attacks", []))
                                 for stars in (3, 2, 1, 0)
@@ -253,6 +254,26 @@ def collect_wars(clan):
     return status
 
 
+def side_maximum(side, size):
+    """Maximaal haalbare sterren van deze kant in een CWL-oorlog (1 aanval per lid)."""
+    attacks = [{"doel": a["defenderTag"], "sterren": a["stars"]} for m in side.get("members", []) for a in m.get("attacks", [])]
+    return max_stars(side.get("stars") or 0, max(0, size - len(attacks)), attacks, size)
+
+
+def cwl_outcome(war, own, other):
+    """w, v, g of bezig. Een uitslag telt zodra die niet meer kan veranderen."""
+    size = war.get("grootte") or 0
+    finished = war["status"] == "warEnded" or (size and own.get("aanvallen", 0) >= size and other.get("aanvallen", 0) >= size)
+    mine, theirs = (own["sterren"], own["procent"]), (other["sterren"], other["procent"])
+    if finished:
+        return "w" if mine > theirs else "v" if mine < theirs else "g"
+    if "max" in other and own["sterren"] > other["max"]:
+        return "w"
+    if "max" in own and other["sterren"] > own["max"]:
+        return "v"
+    return "bezig"
+
+
 def cwl_table(group, results):
     """Tussenstand: sterren plus 10 per gewonnen ronde, daarna percentage."""
     table = {
@@ -264,14 +285,12 @@ def cwl_table(group, results):
     for number, wars in results.items():
         for war in wars:
             a, b = war["kanten"]
-            done = war["status"] == "warEnded"
             for own, other in ((a, b), (b, a)):
                 row = table.get(own["tag"])
                 if not row:
                     continue
-                won = done and (own["sterren"], own["procent"]) > (other["sterren"], other["procent"])
-                lost = done and (own["sterren"], own["procent"]) < (other["sterren"], other["procent"])
-                tied = done and not won and not lost
+                outcome = cwl_outcome(war, own, other)
+                won, lost, tied = outcome == "w", outcome == "v", outcome == "g"
                 row["sterren"] += own["sterren"]
                 row["bonus"] += 10 if won else 0
                 row["vernietigd"] = round(row["vernietigd"] + own["procent"] * (war.get("grootte") or 0), 1)
@@ -282,7 +301,7 @@ def cwl_table(group, results):
                 row["gelijk"] += tied
                 row["rondes"][number] = {
                     "sterren": own["sterren"], "aanvallen": own.get("aanvallen", 0),
-                    "uitslag": "w" if won else "v" if lost else "g" if done else "bezig",
+                    "uitslag": outcome,
                 }
     return sorted(table.values(), key=lambda r: (-(r["sterren"] + r["bonus"]), -r["vernietigd"]))
 

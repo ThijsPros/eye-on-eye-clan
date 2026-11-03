@@ -266,6 +266,7 @@ const soortNaam=w=>w.soort==="cwl"?`CWL ronde ${w.ronde??"?"}`:"Clanoorlog";
 function oordeel(w){const a=w.clan.stars||0,b=w.tegenstander.stars||0;
  if(w.status==="warEnded"){const win=a>b||(a===b&&w.clan.destructionPercentage>w.tegenstander.destructionPercentage);return win?["win","Gewonnen"]:["ver","Verloren"]}
  if(w.maxZij==null)return null;
+ if(w.totaal&&w.clan.aanvallen>=w.totaal&&w.tegenstander.aanvallen>=w.totaal){const x=w.clan.destructionPercentage,y=w.tegenstander.destructionPercentage;if(a>b||(a===b&&x>y))return ["win","Winst is binnen"];if(a<b||(a===b&&x<y))return ["ver","Niet meer te winnen"];return ["open","Gelijkspel"]}
  if(a>w.maxZij)return ["win","Winst is binnen"];
  if(w.maxOns<b)return ["ver","Niet meer te winnen"];
  return ["open","Nog niet beslist"]}
@@ -337,7 +338,7 @@ function overzichtView(){const c=[...D.clans].filter(x=>x.cwl?.stand?.length).so
  return `<tr class="${r.tag===k.tag?"wij ":""}${pos}"><td class="plek"><span class="pijl" aria-label="${pos==="op"?"Promotie":pos==="neer"?"Degradatie":"Blijft"}">${pos==="op"?"▲":pos==="neer"?"▼":"–"}</span> ${i+1}</td><td><div class="speler">${r.logo?`<img class="logo" src="${esc(r.logo)}" width="22" height="22" alt="" loading="lazy">`:""}<span class="sn">${esc(r.naam)}</span></div></td>
  ${rond.map(x=>{const y=r.rondes[x];return `<td class="n opt">${y?`<span class="rs ${y.uitslag}"><b>${y.sterren}</b><small>${y.aanvallen??0}</small></span>`:'<span class="weg">–</span>'}</td>`}).join("")}
  <td class="n opt">${r.aanvallen??0}</td><td class="n">${getal(r.vernietigd)}</td><td class="n opt">${r.sterren}</td><td class="n opt">+${r.bonus||0}</td><td class="n ster">${t}</td><td class="n opt">${v[0]}</td><td class="n opt">${v[1]}</td><td class="n opt">${v[2]}</td><td class="n opt">${v[3]}</td></tr>`}).join("")}</tbody></table></div></article>`}).join("")}
- <p class="uitleg">Per ronde staan de sterren met daaronder de gebruikte aanvallen. Groen is gewonnen, grijs gelijk, rood verloren en blauw bezig. Totaal is sterren plus 10 per gewonnen ronde; bij gelijke stand beslist Vernietigd. ▲ is promotie, ▼ degradatie. Deze stand wordt elk uur bijgewerkt.</p></section>`}
+ <p class="uitleg">Per ronde staan de sterren met daaronder de gebruikte aanvallen. Groen is gewonnen, grijs gelijk, rood verloren en blauw nog niet beslist. Staat de uitslag al vast, dan telt die direct mee, ook de bonus. Totaal is sterren plus 10 per gewonnen ronde; bij gelijke stand beslist Vernietigd. ▲ is promotie, ▼ degradatie. Deze stand wordt elk uur bijgewerkt.</p></section>`}
 
 // Binnen 30 dagen na de eerste bekende oorlog is de echte datum onbekend: die speler zat er al.
 const maand=s=>{const[y,m]=s.split("-");return `${MND[m-1]} ${y}`};
