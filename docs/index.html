@@ -326,7 +326,7 @@ const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice
 const klok=d=>d.toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
-let D,thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
+let D,lidSoort="",thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
 const clanVan=t=>D.clans.find(c=>c.tag===t);
 function schild(nr,maat=40){const c=nr?D?.clans.find(x=>x.nr===nr):null;
  if(c?.logo)return `<img class="logo" src="${esc(c.logo)}" width="${maat}" height="${maat}" alt="${esc(c.naam)}" loading="lazy">`;
@@ -340,7 +340,8 @@ const laag=p=>D.vensterVol&&(p.cw?.moest??0)<D.grensAanvallen;
 const pid=p=>p.tag.slice(1), K=p=>L.spelers[pid(p)]||{};
 const plekNaam=n=>{if(n==null)return"";const v=VAKKEN.find(x=>n>=x.van&&n<=x.tot);return v?`Clan ${ROMEINS[v.nr]}, plek ${n-v.van+1}`:""};
 const COLS=[["naam","Speler"],["sinds","Lid sinds",0,1],["th","TH",1,1],["lgn","League"],["helden","Helden",1,1],["dieren","Dieren",1,1],["equip","Equipment",1,1],["moest","Aanvallen",1,0,"Aanv."],["gedaan","Aanvallen gedaan",1,1],["gemis","Aanvallen gemist",1,0,"Gemist"],["gem","Gem ★",1]];
-const waarde=(p,k)=>k==="moest"?(p.cw?.moest??0):k==="gem"?gem(p):k==="gemis"?(p.cw?.gemis??0):k==="gedaan"?(p.cw?.aanv??0):p[k];
+const cijfers=p=>{if(!lidSoort)return p.cw||{};const k=p.cw?.soorten?.[lidSoort]||{};return {...k,gem:k.aanv?k.sterren/k.aanv:null}};
+const waarde=(p,k)=>{const c=cijfers(p);return k==="moest"?(c.moest??0):k==="gem"?(c.gem??null):k==="gemis"?(c.gemis??0):k==="gedaan"?(c.aanv??0):p[k]};
 
 const soortNaam=w=>w.soort==="cwl"?`CWL ronde ${w.ronde??"?"}`:"Clanoorlog";
 function oordeel(w){const a=w.clan.stars||0,b=w.tegenstander.stars||0;
@@ -495,17 +496,17 @@ function zichtbaar(){const l=D.players.filter(p=>{
  if(filter==="laag")return laag(p);if(filter==="hoog")return (p.cw?.moest??0)>=D.grensAanvallen;if(filter==="gemist")return (p.cw?.gemis||0)>0;return true});
  const e=v=>v==null||v==="";
  return [...l].sort((a,b)=>{const x=waarde(a,sort.k),y=waarde(b,sort.k);if(e(x)&&e(y))return 0;if(e(x))return 1;if(e(y))return -1;return (typeof x==="string"?x.localeCompare(y,"nl"):x-y)*sort.dir})}
-function rijen(){return zichtbaar().map(p=>{const d=p.d||{},m=p.cw?.moest??0,mis=p.cw?.gemis??0,i=encodeURIComponent(p.tag),c=p.inClan?clanVan(p.clanTag):null;
+function rijen(){return zichtbaar().map(p=>{const c0=cijfers(p),d=p.d||{},m=c0.moest??0,mis=c0.gemis??0,i=encodeURIComponent(p.tag),c=p.inClan?clanVan(p.clanTag):null;
  return `<tr><td><div class="speler">${schild(c?.nr,20)}<button class="naam" data-speler="${p.tag.slice(1)}">${esc(p.naam)}</button></div></td>
  <td class="opt">${sindsTekst(p)}</td><td class="n opt">${p.th??"–"}</td><td>${esc(p.league)}${d.l?delta(d.l):""}</td>
  <td class="n opt">${p.helden}${delta(d.h)}</td><td class="n opt">${p.dieren}${delta(d.p)}</td><td class="n opt">${p.equip}${delta(d.e)}</td>
- <td class="n"><span class="tal ${laag(p)?"bad":""}">${m}</span></td><td class="n opt">${p.cw?.aanv??0}</td><td class="n"><span class="${mis?"tal bad":""}">${mis}</span></td><td class="n ster">${gem(p)!=null?gem(p).toFixed(2):"–"}</td></tr>${open.has(p.tag)?detail(p,COLS.length):""}`}).join("")}
+ <td class="n"><span class="tal ${!lidSoort&&laag(p)?"bad":""}">${m}</span></td><td class="n opt">${c0.aanv??0}</td><td class="n"><span class="${mis?"tal bad":""}">${mis}</span></td><td class="n ster">${c0.gem!=null?c0.gem.toFixed(2):"–"}</td></tr>${open.has(p.tag)?detail(p,COLS.length):""}`}).join("")}
 function kop(){return COLS.map(([k,t,n,o,kort])=>`<th class="${n?"n ":""}${o?"opt":""}" aria-sort="${sort.k===k?(sort.dir>0?"ascending":"descending"):"none"}"><button data-k="${k}">${kort?`<span class="lang">${t}</span><span class="kort">${kort}</span>`:t}</button></th>`).join("")}
 function chip(soort,waarde,label,actief,c){return `<button class="chip" data-${soort}="${esc(waarde)}" aria-pressed="${actief===waarde}">${c?schild(c.nr,20):""}${esc(label)}</button>`}
 function spelersView(){return `<section class="sectie"><h2>Alle leden</h2>
  <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Tik op een naam voor het profiel.</p>
  <div class="tools"><input id="zoek" type="search" placeholder="Zoek lid" aria-label="Zoek lid" value="${esc(zoek)}">
- </div><div class="chips">${chip("cf","","Alle clans",clanFilter)}${[...D.clans].sort((a,b)=>a.nr-b.nr).map(c=>chip("cf",c.tag,c.naam,clanFilter,c)).join("")}${D.players.some(p=>!p.inClan)?chip("cf","uit","Buiten onze clans",clanFilter):""}</div><div class="tools">
+ </div><div class="chips">${chip("cf","","Alle clans",clanFilter)}${[...D.clans].sort((a,b)=>a.nr-b.nr).map(c=>chip("cf",c.tag,c.naam,clanFilter,c)).join("")}${D.players.some(p=>!p.inClan)?chip("cf","uit","Buiten onze clans",clanFilter):""}</div><div class="chips">${chip("ls","","CW en CWL",lidSoort)}${chip("ls","oorlog","CW",lidSoort)}${chip("ls","cwl","CWL",lidSoort)}</div><div class="tools">
  <select id="thf" aria-label="Filter op TH"><option value="">Alle TH</option>${[...new Set(D.players.map(p=>p.th).filter(Boolean))].sort((a,b)=>b-a).map(t=>`<option value="${t}"${thFilter===String(t)?" selected":""}>TH ${t}</option>`).join("")}</select><select id="filter" aria-label="Filter spelers"><option value="">Alle leden</option><option value="hoog"${filter==="hoog"?" selected":""}>${D.grensAanvallen} of meer aanvallen</option><option value="laag"${filter==="laag"?" selected":""}>Onder ${D.grensAanvallen} aanvallen</option><option value="gemist"${filter==="gemist"?" selected":""}>Met gemiste aanvallen</option></select>
  <span class="teller" id="teller"></span></div>
  <div class="tablebox"><table><thead><tr id="kop">${kop()}</tr></thead><tbody id="rijen">${rijen()}</tbody></table></div></section>`}
@@ -621,6 +622,7 @@ addEventListener("click",async e=>{const t=e.target.closest("[data-tab]");if(t){
  const sp=e.target.closest("[data-speler]");if(sp){location.hash="speler/"+sp.dataset.speler;return}
  if(e.target.closest("[data-terug]")){history.length>1?history.back():location.hash="spelers";return}
  const cf=e.target.closest("[data-cf]");if(cf){clanFilter=cf.dataset.cf;render();return}
+ const ls=e.target.closest("[data-ls]");if(ls){lidSoort=ls.dataset.ls;render();return}
  const of=e.target.closest("[data-of]");if(of){oorlogClan=of.dataset.of;oorlogAantal=100;render();return}
  const os=e.target.closest("[data-os]");if(os){oorlogSoort=os.dataset.os;oorlogAantal=100;render();return}
  const rd=e.target.closest("[data-ronde]");if(rd){const f=document.querySelector(".front")?.scrollLeft;rondeKeuze[rd.dataset.kclan]=+rd.dataset.ronde;render();document.querySelector(".front").scrollLeft=f;return}

@@ -479,6 +479,12 @@ def own_stats(wars):
             s = stats.setdefault(member["tag"], {"aanv": 0, "moest": 0, "sterren": 0, "drie": 0, "gemis": 0, "oorlogen": 0, "cwlOorlogen": 0, "laatste": None})
             s["oorlogen"] += 1
             s["cwlOorlogen"] += war["soort"] == "cwl"
+            kind = s.setdefault("soorten", {}).setdefault(war["soort"], {"aanv": 0, "moest": 0, "sterren": 0, "gemis": 0})
+            kind["aanv"] += len(member["aanvallen"])
+            kind["moest"] += war["aanvallenPerLid"] if war["status"] == "warEnded" else len(member["aanvallen"])
+            kind["sterren"] += sum(a["sterren"] for a in member["aanvallen"])
+            if war["status"] == "warEnded":
+                kind["gemis"] += max(0, war["aanvallenPerLid"] - len(member["aanvallen"]))
             s["aanv"] += len(member["aanvallen"])
             s["moest"] += war["aanvallenPerLid"] if war["status"] == "warEnded" else len(member["aanvallen"])
             s["sterren"] += sum(a["sterren"] for a in member["aanvallen"])
