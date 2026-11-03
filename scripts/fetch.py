@@ -720,7 +720,7 @@ def ranked_bijwerken(players, raws, leden, clan_tags):
             if b.get("battleType") in ("ranked", "legend"):
                 laatst[tag] = max(laatst.get(tag, 0), moment)
         for b, moment in zip((b for b in log if b.get("battleTimestamp")), momenten):
-            if b.get("battleType") not in ("ranked", "legend") or (not b.get("attack") and b["battleType"] != "legend"):
+            if b.get("battleType") not in ("ranked", "legend"):
                 continue
             week = str(RANKED_START + (moment - RANKED_START) // RANKED_WEEK * RANKED_WEEK)
             regel = weken.setdefault(week, {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
