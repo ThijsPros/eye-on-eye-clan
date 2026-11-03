@@ -297,6 +297,7 @@ def backfill(clans, history):
 
     ours = {clan["tag"] for clan in clans}
     done = history.setdefault("inUitGehad", [])
+    exact = history.setdefault("eerstExact", {})
     for tag in history["spelers"]:
         if tag in done:
             continue
@@ -304,9 +305,13 @@ def backfill(clans, history):
         if events is None:
             complete = False
             continue
-        for event in events:
-            if event.get("clan") in ours and event.get("time"):
-                first[tag] = min(first.get(tag, event["time"][:10]), event["time"][:10])
+        own_events = sorted((e for e in events if e.get("clan") in ours and e.get("time")), key=lambda e: e["time"])
+        if own_events:
+            date = own_events[0]["time"][:10]
+            if date <= first.get(tag, date):
+                first[tag] = date
+                # Alleen een join is een echte datum; een eerste leave betekent dat hij er al zat.
+                exact[tag] = own_events[0].get("type") == "join"
         done.append(tag)
         time.sleep(0.2)
     if complete:
@@ -476,6 +481,7 @@ def main():
         player = dict(player)
         player["inClan"] = player.get("clanTag") in clan_tags
         player["sinds"] = history.setdefault("eerst", {}).setdefault(tag, NOW.strftime("%Y-%m-%d"))
+        player["sindsExact"] = history.get("eerstExact", {}).get(tag, False)
         if tag in CONFIG["bij_ons_sinds"]:
             player["sinds"] = CONFIG["bij_ons_sinds"][tag]
             player["sindsVast"] = True
