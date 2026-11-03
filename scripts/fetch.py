@@ -479,8 +479,8 @@ def main():
         except Private:
             log = {}
         for entry in log.get("items", []):
-            # CWL-regels hebben geen uitslag en tellen niet mee voor de reeksen.
-            if entry.get("result") in ("win", "lose", "tie"):
+            # CWL-regels hebben geen tegenstander-tag en tellen niet mee voor de reeksen.
+            if entry.get("result") in ("win", "lose", "tie") and (entry.get("opponent") or {}).get("tag"):
                 results[entry["endTime"]] = {"win": "w", "lose": "v", "tie": "g"}[entry["result"]]
         status["ongeslagen"] = unbeaten_streak(results)
     month = NOW.strftime("%Y-%m")
