@@ -25,7 +25,7 @@ de workflow `Live-koppeling installeren`, die de secrets `CLOUDFLARE_API_TOKEN`,
 
 ## Geschiedenis
 
-Oude oorlogen en in- en uitstappen komen een keer per dag van ClashKing
+Het archief combineert de officiele oorlogslog met ClashKing. Oude oorlogen en in- en uitstappen komen een keer per dag van ClashKing
 (api.clashk.ing), omdat de officiele API die niet bewaart. Een storing daar stopt
 de gewone ophaalronde niet.
 

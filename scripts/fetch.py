@@ -593,6 +593,7 @@ def main():
     backfill(clans, history)
     wars = load_wars()
     stats = own_stats(wars)
+    log_rows = {}
     for status in clan_status:
         results = history.setdefault("uitslagen", {}).setdefault(status["tag"], {})
         try:
@@ -613,6 +614,7 @@ def main():
         official = set(regular)
         counted = {end: value for end, value in results.items() if end < cutoff or end in official}
         status["ongeslagen"] = unbeaten_streak(counted)
+        log_rows[status["tag"]] = log.get("items", [])
         if status["tag"] in ARCHIVE:
             rows = ARCHIVE[status["tag"]]
             for end in [e for e, r in rows.items() if r["soort"] == "oorlog" and e >= cutoff and e not in official and regular]:
@@ -664,10 +666,25 @@ def main():
     summaries = [war_summary(w) for w in reversed(wars)][:200]
 
     write_json(DATA / "history.json", history)
-    if ARCHIVE:
-        archive = read_json(DATA / "archief.json", {})
-        archive.update({tag: sorted(rows.values(), key=lambda r: r["einde"], reverse=True) for tag, rows in ARCHIVE.items()})
-        write_json(DATA / "archief.json", archive)
+    archive = read_json(DATA / "archief.json", {})
+    archive.update({tag: sorted(rows.values(), key=lambda r: r["einde"], reverse=True) for tag, rows in ARCHIVE.items()})
+    for tag, entries in log_rows.items():
+        rows = {r["einde"]: r for r in archive.get(tag, [])}
+        for entry in entries:
+            opponent = entry.get("opponent") or {}
+            if not opponent.get("tag"):
+                continue  # CWL-seizoensregel
+            per_member = entry.get("attacksPerMember") or 2
+            rows[entry["endTime"]] = {
+                "soort": "oorlog", "ronde": None, "start": entry["endTime"], "einde": entry["endTime"],
+                "grootte": entry.get("teamSize"), "totaal": (entry.get("teamSize") or 0) * per_member,
+                "gebruikt": (entry.get("clan") or {}).get("attacks") or 0,
+                "tegen": opponent.get("name"), "tegenLogo": (opponent.get("badgeUrls") or {}).get("small"),
+                "s": [entry["clan"].get("stars") or 0, opponent.get("stars") or 0],
+                "p": [entry["clan"].get("destructionPercentage") or 0, opponent.get("destructionPercentage") or 0],
+            }
+        archive[tag] = sorted(rows.values(), key=lambda r: r["einde"], reverse=True)
+    write_json(DATA / "archief.json", archive)
     write_json(DATA / "latest.json", {
         "bijgewerkt": NOW.isoformat(timespec="seconds"),
         "sindsBegin": min(history["eerst"].values()),
