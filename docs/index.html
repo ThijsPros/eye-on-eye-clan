@@ -351,7 +351,7 @@ const MND=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","de
 const iso=s=>s?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`:null;
 const datum=s=>{if(!s)return"–";const[y,m,d]=s.slice(0,10).split("-");return `${+d} ${MND[m-1]} ${y}`};
 const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice(13,15)}Z`):null;
-const klok=d=>d.toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+const klok=d=>`${d.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long",timeZone:"Europe/Amsterdam"})} ${d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Amsterdam"})}`;
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
 let D,bakPool="13",bakZoek="",bakVrij=false,bakSort="score",gekozen=null,lidSoort="",thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},historie={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
