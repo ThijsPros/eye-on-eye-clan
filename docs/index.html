@@ -559,12 +559,16 @@ function spelerView(){const tag=spelerTag,z=spelerData[tag];laadSpeler(tag);cons
  ${groei?`<div class="paneel"><h3>Groei</h3><div class="dgrid">${groei}</div></div>`:""}
  ${z.gemist.length?`<div class="paneel"><h3>Gemiste aanvallen</h3><ul class="gemist">${z.gemist.map(g=>`<li>${datum(iso(g.datum))}: ${g.aantal} tegen ${esc(g.tegen)} (${g.soort==="cwl"?"CWL":"CW"})</li>`).join("")}</ul></div>`:""}
  <div class="paneel"><h3>Aanvallen</h3>${aanval?`<div class="tablebox plat"><table><thead><tr><th><span class="kp">Datum</span></th><th class="opt"><span class="kp">Soort</span></th><th class="opt"><span class="kp">Tegen clan</span></th><th><span class="kp">Doel</span></th><th><span class="kp">Resultaat</span></th><th class="n opt"><span class="kp">Tijd</span></th></tr></thead><tbody>${aanval}</tbody></table></div>`:'<p class="uitleg">Geen aanvallen in deze periode.</p>'}</div></section>`}
-function berichten(){const uit=[];
- D.oorlogen.filter(w=>w.status==="inWar").forEach(w=>{const namen=w.open.map(o=>`- ${o.naam}${o.over>1?` (${o.over} over)`:""}`).join("\n");
-  uit.push([`Herinnering ${w.clan.name}`,`⚔️ ${w.clan.name} tegen ${w.tegenstander.name}\nStand: ${w.clan.stars} - ${w.tegenstander.stars}\nDe oorlog eindigt ${klok(tijd(w.einde))}.\n\n${namen?"Nog aanvallen:\n"+namen:"Iedereen heeft aangevallen. Top!"}`])});
- const w=D.oorlogen.find(x=>x.status==="warEnded");
- if(w){const t={win:"Gewonnen! 🎉",ver:"Verloren.",open:"Gelijkspel."}[oordeel(w)[0]];
-  uit.push([`Laatste uitslag ${w.clan.name}`,`🏁 ${w.clan.name} tegen ${w.tegenstander.name}\n${t}\nSterren: ${w.clan.stars} - ${w.tegenstander.stars}\nAanvallen gebruikt: ${w.gebruikt}/${w.totaal}${w.open.length?"\n\nNiet alles gebruikt:\n"+w.open.map(o=>`- ${o.naam}`).join("\n"):""}`])}
+function resttekst(doel){const m=Math.max(0,Math.round((doel-Date.now())/6e4));return `${Math.floor(m/60)}u ${String(m%60).padStart(2,"0")}m`}
+function clanBericht(c){const eigen=D.oorlogen.filter(w=>w.clan.tag===c.tag),bezig=eigen.find(w=>w.status==="inWar"),voor=eigen.find(w=>w.status==="preparation"),klaar=eigen.find(w=>w.status==="warEnded"&&Date.now()-tijd(w.einde)<864e5),w=bezig||klaar||voor;
+ if(!w)return null;const r=[`🛡️ *${c.naam}* (${soortNaam(w)})`,`tegen ${w.tegenstander.name}`];
+ if(w.status==="preparation")r.push(`⏳ Start over ${resttekst(tijd(w.start))}`);
+ else{const o=oordeel(w);r.push(`⭐ *${w.clan.stars??0} - ${w.tegenstander.stars??0}* sterren`,`💥 ${pct(w.clan.destructionPercentage)} - ${pct(w.tegenstander.destructionPercentage)}`,`🗡️ ${w.clan.aanvallen??w.gebruikt}/${w.totaal} aanvallen`);
+  if(w.status==="inWar"){r.push(`⏳ Nog ${resttekst(tijd(w.einde))}, eindigt ${tijd(w.einde).toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})}`);if(o&&o[0]!=="open")r.push(`🏆 ${o[1]}`);r.push(w.open.length?`❗ Nog aanvallen: ${w.open.map(x=>x.naam).join(", ")}`:"✅ Iedereen heeft aangevallen")}
+  else{r.push(`🏁 ${o?o[1]:"Afgelopen"}`);if(w.open.length)r.push(`❌ Niet aangevallen: ${w.open.map(x=>x.naam).join(", ")}`)}}
+ if(w===bezig&&voor)r.push(`➡️ Hierna ${soortNaam(voor)} tegen ${voor.tegenstander.name}`);return r.join("\n")}
+function berichten(){const uit=[],delen=[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(clanBericht).filter(Boolean);
+ if(delen.length)uit.push(["Oorlogsupdate",`⚔️ *EYE ON EYE OORLOGSUPDATE* ⚔️\n_${klok(new Date)}_\n\n${delen.join("\n\n")}\n\n📊 https://thijspros.github.io/eye-on-eye-clan/`]);
  const top=D.players.filter(p=>p.inClan&&p.d&&(p.d.h||p.d.p||p.d.e)).map(p=>[p,p.d.h+p.d.p+p.d.e]).sort((a,b)=>b[1]-a[1]).slice(0,5);
  if(top.length)uit.push(["Groeiers van de maand",`📈 Grootste groei deze maand\n${top.map(([p,g],i)=>`${i+1}. ${p.naam} (+${g})`).join("\n")}`]);
  return uit}
