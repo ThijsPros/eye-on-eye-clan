@@ -246,6 +246,13 @@ def to_date(value):
     return f"{value[:4]}-{value[4:6]}-{value[6:8]}"
 
 
+def war_result(ours, theirs):
+    """w, v of g. Sterren eerst, daarna percentage."""
+    a = (ours.get("stars") or 0, ours.get("destructionPercentage") or 0)
+    b = (theirs.get("stars") or 0, theirs.get("destructionPercentage") or 0)
+    return "w" if a > b else "v" if a < b else "g"
+
+
 def unbeaten_streak(results):
     """Aantal normale oorlogen op rij zonder verlies, nieuwste eerst."""
     count = 0
@@ -280,6 +287,11 @@ def backfill(clans, history):
                 for member in side.get("members", []):
                     first[member["tag"]] = min(first.get(member["tag"], date), date)
         wars = [w for w in wars if w.get("state") == "warEnded" and w.get("startTime")]
+        results = history.setdefault("uitslagen", {}).setdefault(tag, {})
+        for war in wars:
+            if not war.get("tag"):
+                ours, theirs = (war["clan"], war["opponent"]) if war["clan"].get("tag") == tag else (war["opponent"], war["clan"])
+                results.setdefault(war["endTime"], war_result(ours, theirs))
         rounds = {}
         for war in sorted((w for w in wars if w.get("tag")), key=lambda w: w["startTime"]):
             month = war["startTime"][:6]
@@ -478,7 +490,12 @@ def main():
             log = get(f"/clans/{tag_url(status['tag'])}/warlog?limit=200") or {}
         except Private:
             log = {}
+        # De officiele log geeft alleen de laatste 60 regels en daarna oude jaren.
+        # Daarom vult ClashKing de tussenliggende oorlogen aan.
+        cutoff = min((e["endTime"] for e in log.get("items", []) if e["endTime"] >= f"{NOW.year - 1}"), default="")
         for entry in log.get("items", []):
+            if entry["endTime"] < cutoff:
+                continue
             # CWL-regels hebben geen tegenstander-tag en tellen niet mee voor de reeksen.
             if entry.get("result") in ("win", "lose", "tie") and (entry.get("opponent") or {}).get("tag"):
                 results[entry["endTime"]] = {"win": "w", "lose": "v", "tie": "g"}[entry["result"]]
