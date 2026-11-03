@@ -1,42 +1,76 @@
 {
  "spelers": {
+  "2009LP2LR": {
+   "whatsapp": "Jordypro"
+  },
   "20280QY8R": {
    "appgroep": "Ja",
-   "plek": 12
+   "plek": 12,
+   "whatsapp": "Alex"
+  },
+  "20LU899VY": {
+   "whatsapp": "Maas"
   },
   "22YU8YCV0": {
    "appgroep": "Ja",
-   "plek": 8
+   "plek": 8,
+   "whatsapp": "AnneGast"
   },
   "280PUCJP0": {
    "appgroep": "Ja",
-   "plek": 25
+   "plek": 25,
+   "whatsapp": "Roel"
   },
   "282CLVPRQ": {
    "appgroep": "Ja",
-   "plek": 28
+   "plek": 28,
+   "whatsapp": "Robert"
   },
   "29QJ8CCJV": {
    "appgroep": "Ja",
-   "plek": 29
+   "plek": 29,
+   "whatsapp": "Jordypro"
+  },
+  "2J9U99UL2": {
+   "whatsapp": "Hockey Kampioen (Olivier)"
+  },
+  "2LY9Q2VPQ": {
+   "whatsapp": "Maradona"
+  },
+  "2LYJYRVR2": {
+   "whatsapp": "LAVA KING (Arnaud)"
+  },
+  "2RGVVJGY9": {
+   "whatsapp": "Yorben"
+  },
+  "2RU9GLL2": {
+   "whatsapp": "Ninja"
   },
   "2Y0RJYL92": {
-   "appgroep": "Ja"
+   "appgroep": "Ja",
+   "whatsapp": "Robert"
   },
   "80YULR99P": {
    "appgroep": "Ja",
-   "plek": 2
+   "plek": 2,
+   "whatsapp": "Tim"
   },
   "888Y8Q0PQ": {
    "appgroep": "Ja",
-   "plek": 21
+   "plek": 21,
+   "whatsapp": "Timon"
   },
   "890JVC0Q2": {
-   "appgroep": "Ja"
+   "appgroep": "Ja",
+   "whatsapp": "Milano"
+  },
+  "89PY99GVU": {
+   "whatsapp": "Ferron"
   },
   "8GP0QCGCJ": {
    "appgroep": "Ja",
-   "plek": 11
+   "plek": 11,
+   "whatsapp": "Rick (ikke)"
   },
   "8PLCQJ0RR": {
    "appgroep": "Ja"
@@ -49,50 +83,106 @@
   },
   "8V8GVJCR": {
    "appgroep": "Ja",
-   "plek": 15
+   "plek": 15,
+   "whatsapp": "Bloodthirsty (Sem)"
   },
   "9J8Y822CG": {
    "appgroep": "Ja",
-   "plek": 4
+   "plek": 4,
+   "whatsapp": "Najeeb"
   },
   "9JJQ9J08C": {
    "appgroep": "Ja",
-   "plek": 17
+   "plek": 17,
+   "whatsapp": "The Beast"
   },
   "9YVCQY8Q0": {
    "appgroep": "Ja",
-   "plek": 10
+   "plek": 10,
+   "whatsapp": "Mattie"
+  },
+  "G8LRJURQ": {
+   "whatsapp": "Karel (Sten)"
+  },
+  "G8URU9UPV": {
+   "whatsapp": "Nick (Julian)"
+  },
+  "G9RJ28G0R": {
+   "whatsapp": "deanos"
   },
   "G9UJ0LGU9": {
    "appgroep": "Nee"
   },
+  "GCL0YJUCV": {
+   "whatsapp": "Ferron"
+  },
+  "GLYURV0CV": {
+   "whatsapp": "Ferron"
+  },
+  "GQY9QQQ0": {
+   "whatsapp": "Dennis (the king)"
+  },
+  "GR0LLUUPG": {
+   "whatsapp": "Thijs"
+  },
+  "GU9YQP0CV": {
+   "whatsapp": "Thijs"
+  },
+  "GVLRJGUVR": {
+   "whatsapp": "Thijs"
+  },
+  "J0G0G8V9": {
+   "whatsapp": "Jordypro"
+  },
   "JRGU2C2V": {
    "appgroep": "Ja",
-   "plek": 22
+   "plek": 22,
+   "whatsapp": "Dikkekerper (Eelco)"
+  },
+  "L00VCUVUR": {
+   "whatsapp": "Robert"
+  },
+  "L2GP9QQGL": {
+   "whatsapp": "Rick (doerak)"
   },
   "L2U0J20LV": {
    "appgroep": "Ja",
-   "plek": 19
+   "plek": 19,
+   "whatsapp": "Nick (Julian)"
   },
   "L92QUCY": {
    "appgroep": "Ja",
-   "plek": 27
+   "plek": 27,
+   "whatsapp": "a.einstein"
   },
   "LGJ0CC9R": {
    "appgroep": "Ja",
-   "plek": 1
+   "plek": 1,
+   "whatsapp": "Matin"
   },
   "LJVUUUUU": {
    "appgroep": "Ja",
-   "plek": 24
+   "plek": 24,
+   "whatsapp": "Karel (Sten)"
+  },
+  "LJYPR0QR": {
+   "whatsapp": "Matin"
+  },
+  "LLYU2UGC0": {
+   "whatsapp": "Nathanaël"
+  },
+  "LRVPY020P": {
+   "whatsapp": "Robert"
   },
   "LU8LQU2VU": {
    "appgroep": "Ja",
-   "plek": 23
+   "plek": 23,
+   "whatsapp": "Marc (en Sem)"
   },
   "LUQJLQC9": {
    "appgroep": "Nee",
-   "plek": 14
+   "plek": 14,
+   "whatsapp": "You Bleed (Nick)"
   },
   "P0RRYJYCC": {
    "appgroep": "Ja",
@@ -100,61 +190,96 @@
   },
   "P2RC20GV0": {
    "appgroep": "Ja",
-   "plek": 16
+   "plek": 16,
+   "whatsapp": "Visblob"
+  },
+  "P9RP88VR8": {
+   "whatsapp": "Robert"
+  },
+  "P9VPUQJCV": {
+   "whatsapp": "KaneDep"
   },
   "PG0G9GR2": {
    "appgroep": "Ja",
-   "plek": 9
+   "plek": 9,
+   "whatsapp": "Delano"
+  },
+  "PLRCUVLG": {
+   "whatsapp": "Maas"
   },
   "PP998PVG": {
    "appgroep": "Nee",
-   "plek": 6
+   "plek": 6,
+   "whatsapp": "Jordypro"
+  },
+  "PR9VRLLL": {
+   "whatsapp": "King"
   },
   "PVUJCYV": {
    "appgroep": "Ja",
-   "plek": 5
+   "plek": 5,
+   "whatsapp": "Shulan"
   },
   "PY228JV8": {
    "appgroep": "Ja"
   },
+  "QCC8PVVGG": {
+   "whatsapp": "Amy"
+  },
+  "QGCCPGY2G": {
+   "whatsapp": "Thijs"
+  },
   "QL9JCJ29G": {
    "appgroep": "Ja",
-   "plek": 7
+   "plek": 7,
+   "whatsapp": "Nick (Julian)"
+  },
+  "QQRQ0RPCQ": {
+   "whatsapp": "TD"
   },
   "QRRYV2899": {
-   "appgroep": "Ja"
+   "appgroep": "Ja",
+   "whatsapp": "You Bleed (Nick)"
   },
   "QUULGCPRR": {
    "appgroep": "Ja",
-   "plek": 3
+   "plek": 3,
+   "whatsapp": "TD"
   },
   "QUYLU8C0": {
    "appgroep": "Ja",
-   "plek": 13
+   "plek": 13,
+   "whatsapp": "Thijs"
   },
   "QYV8RP08Q": {
    "appgroep": "Ja",
-   "plek": 18
+   "plek": 18,
+   "whatsapp": "sir jojo"
+  },
+  "R0QJY2ULY": {
+   "whatsapp": "Ferron"
+  },
+  "R880U89PL": {
+   "whatsapp": "Thijs"
+  },
+  "R9PJR2QLC": {
+   "whatsapp": "Maradona"
   },
   "U99U0280": {
    "appgroep": "Ja",
-   "plek": 20
+   "plek": 20,
+   "whatsapp": "Ferron"
+  },
+  "YCURJYQP8": {
+   "whatsapp": "Robert"
+  },
+  "YGYLVUG0G": {
+   "whatsapp": "LAVA KING (Arnaud)"
   },
   "YJ8PU9YQ8": {
    "appgroep": "Ja",
-   "plek": 30
-  },
-  "ye on Eye Clan": {
-   "whatsapp": "You Bleed (Nick)"
-  },
-  "ye on Eye II": {
-   "whatsapp": "TD"
-  },
-  "ye on Eye III": {
+   "plek": 30,
    "whatsapp": "Yiro (Eclease)"
-  },
-  "ye on Eye IV": {
-   "whatsapp": "Thijs"
   }
  }
 }
