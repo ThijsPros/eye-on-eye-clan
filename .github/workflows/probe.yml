@@ -1,0 +1,28 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 - <<'P'
+          import json,urllib.request,urllib.error,collections
+          def g(u):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan"})
+              try:
+                  x=urllib.request.urlopen(r,timeout=120);return x.status,x.read()
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read()[:200]
+              except Exception as e:
+                  return str(e)[:60],b""
+          d=json.loads(g("https://api.clashk.ing/openapi.json")[1])
+          for p in ["/v2/clan/{clanTag}/join-leave","/clan/{clan_tag}/join-leave","/v2/player/{playerTag}/league/history","/v2/player/{playerTag}/history/stats"]:
+              print("PAR",p,[x.get("name") for x in d["paths"][p]["get"].get("parameters",[])])
+          for c in ["PYQ2RLCQ","2RGYGLVC0","2JYY0809P","2CJY8LJU0"]:
+              s,b=g(f"https://api.clashk.ing/clan/%23{c}/join-leave?limit=50000")
+              if s==200:
+                  i=json.loads(b)["items"];t=collections.Counter(x["tag"] for x in i);print("JL",c,len(i),len(t),min(x["time"] for x in i)[:10],max(x["time"] for x in i)[:10],collections.Counter(x["th"]>=14 for x in {y["tag"]:y for y in i}.values()))
+              else: print("JL",c,s,b)
+          for u in ["https://api.clashk.ing/v2/player/%2380YULR99P/league/history","https://api.clashk.ing/v2/player/%2380YULR99P/history/stats","https://api.clashk.ing/v2/player/%2380YULR99P/war/stats"]:
+              s,b=g(u);print("EP",u,s,b[:500])
+          P
