@@ -726,7 +726,7 @@ def main():
              "l": current[3] - before[3] if len(before) > 3 and current[3] and before[3] else None}
             if before else None
         )
-        player["s"] = [series.get(m, [None] * 3)[:3] if m in series else None for m in labels]
+        player["s"] = [(series[m] + [None])[:4] if m in series else None for m in labels]
         player["cw"] = stats.get(tag)
         output.append(player)
 
