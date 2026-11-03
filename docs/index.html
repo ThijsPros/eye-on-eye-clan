@@ -268,7 +268,7 @@ function scoreBlok(w){const o=oordeel(w),per=w.totaal||0,ons=w.clan.aanvallen??w
  return `<div class="score"><b class="pil wij">${w.clan.stars??0}</b><span class="lab">Sterren</span><b class="pil zij">${w.tegenstander.stars??0}</b>
  ${rij("Vernietigd",pct(w.clan.destructionPercentage),pct(w.tegenstander.destructionPercentage))}${rij("Gem. tijd",mmss(w.gemTijdOns),mmss(w.gemTijdZij))}
  <span class="met">${balk(ons,"wij")}${ons}/${per}</span><span class="lab">Aanvallen</span><span class="met">${balk(zij,"zij")}${zij}/${per}</span>
- ${w.maxOns!=null?rij("Maximaal",w.maxOns,w.maxZij):""}</div>${o?`<p class="oordeel ${o[0]}">${o[1]}</p>`:""}`}
+ ${w.maxOns!=null?rij("Max. haalbaar",w.maxOns,w.maxZij):""}</div>${o?`<p class="oordeel ${o[0]}">${o[1]}</p>`:""}`}
 function timerBlok(w){const e=tijd(w.einde),st=tijd(w.start);
  if(w.status==="inWar")return `<div class="timer"><b data-tot="${+e}">${resttijd(e)}</b><span>Eindigt ${klok(e)}</span></div>`;
  if(w.status==="preparation")return `<div class="timer"><b data-tot="${+st}">${resttijd(st)}</b><span>Start ${klok(st)}, eindigt ${klok(e)}</span></div>`;
