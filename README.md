@@ -11,6 +11,9 @@ openbare website via GitHub Pages.
 3. Controleer `docs/data/api_check.json`. Daarin staan de gevonden clans en de
    vergelijking met de ClashSpot-export.
 
+Elke speler die ooit in een van de clans is gezien, blijft bewaard, ook na een
+overstap of vertrek.
+
 De sleutel staat als GitHub-secret `COC_API_KEY` en hoort op IP `45.79.218.79`
 van de RoyaleAPI-proxy te staan.
 
@@ -18,9 +21,7 @@ van de RoyaleAPI-proxy te staan.
 
 In `config.json`:
 
-- `clan_tags`: vaste clans. Vul hier alle vier de tags in.
-- `clan_naam_begint_met`: alleen clans met deze naam tellen mee.
-- `alleen_vaste_clans`: `true` slaat het zoeken via spelers over.
+- `clans`: de vier clans in vaste volgorde, met hun rol op de site.
 - `venster_dagen`: periode voor aanvallen en gemiddelde.
 - `grens_aanvallen`: onder dit aantal wordt een speler rood.
 

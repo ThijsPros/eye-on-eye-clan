@@ -123,21 +123,15 @@ def summarize_player(raw):
     }
 
 
-def discover_clans(baseline):
-    """Vindt de clans via vaste tags en via de clan van bekende spelers."""
-    prefix = CONFIG["clan_naam_begint_met"].lower()
-    tags = list(CONFIG["clan_tags"])
-    if not CONFIG.get("alleen_vaste_clans"):
-        for player in baseline["players"]:
-            raw = get("/players/" + tag_url(player["tag"]))
-            clan = (raw or {}).get("clan")
-            if clan and clan["tag"] not in tags and clan["name"].lower().startswith(prefix):
-                tags.append(clan["tag"])
+def load_clans():
+    """Haalt de vaste clans op, in de volgorde van config.json."""
     clans = []
-    for tag in tags:
-        raw = get("/clans/" + tag_url(tag))
-        if raw and raw["name"].lower().startswith(prefix):
-            clans.append(raw)
+    for number, entry in enumerate(CONFIG["clans"], 1):
+        raw = get("/clans/" + tag_url(entry["tag"]))
+        if raw:
+            clans.append({**raw, "nr": number, "rol": entry["rol"]})
+        else:
+            print("Clan niet gevonden: " + entry["tag"])
     return clans
 
 
@@ -308,12 +302,13 @@ def main():
     if not baseline or not history:
         sys.exit("baseline.json of history.json ontbreekt")
 
-    clans = discover_clans(baseline)
+    clans = load_clans()
     if not clans:
-        sys.exit("Geen clans gevonden. Vul clan_tags in config.json in.")
+        sys.exit("Geen clans gevonden. Controleer de tags in config.json.")
 
     tags = [m["tag"] for clan in clans for m in clan.get("memberList", [])]
     tags += [p["tag"] for p in baseline["players"]]
+    tags += list(history["spelers"])  # Iedereen die ooit is gezien, blijft gevolgd.
     tags = list(dict.fromkeys(tags))
 
     previous = {p["tag"]: p for p in read_json(DATA / "latest.json", {}).get("players", [])}
@@ -340,7 +335,7 @@ def main():
         status = collect_wars(clan)
         wars_tag = clan["tag"]
         clan_status.append({
-            "tag": wars_tag, "naam": clan["name"], "niveau": clan.get("clanLevel"),
+            "tag": wars_tag, "nr": clan["nr"], "rol": clan["rol"], "naam": clan["name"], "niveau": clan.get("clanLevel"),
             "leden": clan.get("members"), "warLeague": (clan.get("warLeague") or {}).get("name"),
             "winst": clan.get("warWins"), "serie": clan.get("warWinStreak"), **status,
         })
@@ -355,6 +350,7 @@ def main():
     earlier = labels[labels.index(month) - 1] if labels.index(month) else None
 
     clan_tags = {c["tag"] for c in clans}
+    moves = history.setdefault("clans", {})
     baseline_by_tag = {p["tag"]: p for p in baseline["players"]}
     output = []
     for tag, player in players.items():
@@ -365,6 +361,16 @@ def main():
         before = series.get(earlier)
         player = dict(player)
         player["inClan"] = player.get("clanTag") in clan_tags
+        move = moves.get(tag)
+        if not player.get("verouderd"):
+            if not move or move["tag"] != player.get("clanTag"):
+                moves[tag] = move = {
+                    "tag": player.get("clanTag"), "naam": player.get("clan"),
+                    "vorige": move["naam"] if move else None,
+                    "sinds": NOW.strftime("%Y-%m-%d") if move else None,
+                }
+        if move and move.get("vorige"):
+            player["vorigeClan"], player["overstap"] = move["vorige"], move["sinds"]
         player["d"] = (
             {"h": current[0] - before[0], "p": current[1] - before[1], "e": current[2] - before[2],
              "l": current[3] - before[3] if len(before) > 3 and current[3] and before[3] else None}

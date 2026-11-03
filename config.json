@@ -1,7 +1,22 @@
 {
-  "clan_tags": ["#PYQ2RLCQ"],
-  "clan_naam_begint_met": "Eye on Eye",
-  "alleen_vaste_clans": false,
+  "clans": [
+    {
+      "tag": "#PYQ2RLCQ",
+      "rol": "Hoofdclan"
+    },
+    {
+      "tag": "#2RGYGLVC0",
+      "rol": "Tweede actieve clan"
+    },
+    {
+      "tag": "#2JYY0809P",
+      "rol": "CWL voor plek 16 t/m 30"
+    },
+    {
+      "tag": "#2CJY8LJU0",
+      "rol": "Oorlogen tijdens de CWL"
+    }
+  ],
   "venster_dagen": 90,
   "grens_aanvallen": 25
 }
