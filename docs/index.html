@@ -517,7 +517,7 @@ async function ververs(){if(!liveUrl||document.hidden||!D)return;let gelukt=fals
  uit.forEach(x=>{if(x.status!=="fulfilled")return;gelukt=true;const[w,raw]=x.value;verwerkLive(w,raw)});
  liveTijd=gelukt?new Date:null;liveUit=!gelukt;
  if(tab==="overzicht"){if(JSON.stringify([D.oorlogen,D.clans])!==voor){const v=document.querySelector(".front")?.scrollLeft;$("muur").innerHTML=muur();$("inhoud").innerHTML=overzichtView();const f=document.querySelector(".front");if(f)f.scrollLeft=v}else if($("versheid"))$("versheid").textContent=versheid()}}
-function nuTeDoen(){const r=[...D.clans].map(c=>({c,w:D.oorlogen.find(w=>w.clan.tag===c.tag&&w.status==="inWar")})).filter(x=>x.w).sort((a,b)=>tijd(a.w.einde)-tijd(b.w.einde));if(!r.length)return"";
+function nuTeDoen(){const r=[...D.clans].map(c=>({c,w:D.oorlogen.find(w=>w.clan.tag===c.tag&&w.status==="inWar")})).filter(x=>x.w).sort((a,b)=>(a.c.nr||0)-(b.c.nr||0));if(!r.length)return"";
  return `<div class="nutedoen"><h3>Nu te doen</h3><ul>${r.map(({c,w})=>{const nog=[...new Set((w.open||[]).map(x=>x.naam))],e=tijd(w.einde),krap=e-Date.now()<72e5;
  return `<li class="${nog.length&&krap?"krap":""}">${schild(c.nr,30)}<div class="actie"><b>${esc(c.naam)}</b>${nog.length?`<span>${nog.length} ${nog.length===1?"moet":"moeten"} nog aanvallen, nog ${resttekst(e)}</span><span class="wie">${nog.map(esc).join(", ")}</span>`:"<span>Iedereen heeft aangevallen</span>"}</div></li>`}).join("")}</ul></div>`}
 function muur(){const lijst=[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0));return `<div class="warhead"><h2>Status oorlogen</h2><p class="fresh" id="versheid">${versheid()}</p></div>${nuTeDoen()}
@@ -817,7 +817,7 @@ addEventListener("click",async e=>{const mk=e.target.closest("[data-meer]"),nv=$
   if(a==="advies"&&confirm("De huidige opstelling vervangen door het advies?")){const ad=advies();D.players.forEach(p=>{if(K(p).plek!=null||ad[pid(p)])zetKeuze(pid(p),"plek",ad[pid(p)]??null)});concept();render()}
   if(a==="leeg"&&confirm("Alle spelers uit de opstelling van alle clans halen? Dit staat pas vast als je daarna opslaat.")){Object.keys(L.spelers).forEach(id=>{if(L.spelers[id].plek!=null)zetKeuze(id,"plek",null)});gekozen=null;concept();render()}
   if(a==="herstel"&&confirm("Niet-opgeslagen wijzigingen wissen?")){try{localStorage.removeItem("eoe-concept")}catch{}gewijzigd=0;await laadLeiding(true);render()}
-  if(a==="meer"){oorlogAantal+=100;render()}return}
+  if(a==="meer"){oorlogAantal+=100;render()}return}});
 setInterval(ververs,3e4);setInterval(roofLive,3e4);
 document.addEventListener("visibilitychange",ververs);
 addEventListener("toggle",e=>{const d=e.target;if(d.dataset?.lijst){d.open?dichteLijst.delete(d.dataset.lijst):dichteLijst.add(d.dataset.lijst)}},true);
