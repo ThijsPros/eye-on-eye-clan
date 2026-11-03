@@ -222,6 +222,62 @@ footer{padding-block:0 28px;color:var(--muted);font-size:13px}
 @media (prefers-reduced-motion:no-preference){
  .tug i{transition:width .5s ease}
 }
+
+/* Game-skin: stevige panelen, goud op nachtblauw, knoppen met diepte. */
+:root{--night:#17408F;--night-deep:#0E2A66;--page:#0A1A42;--surface:#17336F;--ink:#F4F7FF;--muted:#AFBEDF;--line:#2E4F99;--star:#FFC93C;--gold:#FFC93C;--on-night:#FFFFFF;--on-night-soft:#C4D2EE;--good:#62DE93;--bad:#FF8F84;color-scheme:dark}
+body{background:linear-gradient(180deg,#0E2560,#0A1A42 420px) var(--page)}
+.wall{background:linear-gradient(180deg,#1F54B8,#17408F 240px)}
+.wall::after{background:repeating-linear-gradient(90deg,#0E2560 0 30px,transparent 30px 66px)}
+h1,h2,h3{text-shadow:0 2px 0 rgb(0 0 0/.45)}
+.brand h1{font-size:32px}
+.kol,.clans,.vak,.tablebox,.lijst,.letop,.sleutel,.paneel{background:linear-gradient(180deg,#21438F,#17336F 90px);border:2px solid #081538;border-radius:12px;box-shadow:inset 0 2px 0 rgb(255 255 255/.14),0 4px 0 #071230}
+.kol{background:linear-gradient(180deg,#143479,#0E2A66 110px)}
+.tablebox.plat{background:none;border:0;box-shadow:none;border-radius:0}
+.paneel{padding:14px 16px;display:grid;gap:10px;min-width:0;align-content:start}
+.plat th .kp,.plat td{padding-inline:5px}
+.plat table{font-size:14px}
+.paneel h3{font-size:21px}
+th{color:#CFDcf8;background:#0F2A66}th:first-child{border-top-left-radius:9px}th:last-child{border-top-right-radius:9px}
+.tablebox.plat th{background:rgb(0 0 0/.22)}
+tbody tr:hover td{background:rgb(255 255 255/.05)}
+.naam{color:#fff}.naam:hover{color:var(--gold);text-decoration:underline}
+.knop{background:linear-gradient(180deg,#FFD65A,#F2A71B);color:#3A2600;font-weight:700;border-radius:9px;padding:9px 16px;box-shadow:inset 0 2px 0 rgb(255 255 255/.5),0 3px 0 #9A6400}
+.knop.licht{background:linear-gradient(180deg,#3F78DE,#2558B8);color:#fff;box-shadow:inset 0 2px 0 rgb(255 255 255/.28),0 3px 0 #123676}
+.knop:active{transform:translateY(2px);box-shadow:0 1px 0 #123676}
+.knop[disabled]{filter:grayscale(.7)}
+.nav button{border-radius:9px;background:linear-gradient(180deg,#2C5FC0,#1C4596);color:#fff;box-shadow:inset 0 2px 0 rgb(255 255 255/.2),0 3px 0 #0C2A66}
+.nav button[aria-current="page"]{background:linear-gradient(180deg,#FFD65A,#F2A71B);color:#3A2600;box-shadow:inset 0 2px 0 rgb(255 255 255/.5),0 3px 0 #9A6400}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:5px 12px;border-radius:999px;font-weight:500;font-size:14px;background:#17336F;border:2px solid #2E4F99;color:#fff}
+.chip[aria-pressed="true"]{background:var(--gold);border-color:#9A6400;color:#3A2600}
+.chip:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.tegels{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px}
+.tegel{display:grid;gap:1px;padding:9px 10px;border-radius:9px;background:rgb(0 0 0/.24);box-shadow:inset 0 1px 0 rgb(255 255 255/.08);text-align:center;font-size:13px;color:var(--muted)}
+.tegel b{font:400 26px/1.1 var(--display);color:#fff;text-shadow:0 2px 0 rgb(0 0 0/.4)}
+.tegel.t-win b{color:var(--good)}.tegel.t-ver b{color:var(--bad)}.tegel.t-goud b{color:var(--gold)}.tegel.t-g b{color:#C8D1E4}
+.tegels.klein .tegel b{font-size:22px}
+.uitslag{border-left:6px solid #6B7488}.uitslag.r-win{border-left-color:#17A25A}.uitslag.r-ver{border-left-color:#D2392E}
+.profielkop{display:flex;align-items:center;gap:16px}
+.pk{display:grid;gap:6px;min-width:0}.pk h2{font-size:34px}
+.labels{display:flex;flex-wrap:wrap;gap:6px}
+.label{padding:3px 9px;border-radius:6px;background:rgb(0 0 0/.28);font-size:13px;font-weight:500}
+.label.goud{background:var(--gold);color:#3A2600;font-weight:700}
+.terug{justify-self:start}
+.profiel{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
+.lvls{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.lvls li{display:grid;grid-template-columns:minmax(0,1.1fr) 1fr 62px;gap:8px;align-items:center;font-size:14px}
+.lvls b{text-align:right;font-weight:500}
+.lvlbar{display:block;height:11px;border-radius:6px;background:rgb(0 0 0/.35);overflow:hidden}
+.lvlbar i{display:block;height:100%;background:linear-gradient(180deg,#7DB7FF,#3E7BE0)}
+.lvlbar.vol i{background:linear-gradient(180deg,#FFE083,#F2A71B)}
+.gemist{margin:0;padding-left:18px;font-size:15px}
+.blok{display:block;max-width:180px}
+.spark svg{color:#7DB7FF}
+.vooruit{padding:8px 12px;border-radius:9px;background:rgb(0 0 0/.22)}
+.uitleg{color:var(--muted)}
+input,select{background:#0F2A66;border-color:#2E4F99}
+@media (max-width:720px){.pk h2{font-size:26px}.nav{background:#0A1A42;box-shadow:0 -2px 0 #081538}.nav button{box-shadow:0 2px 0 #0C2A66;font-size:14px}.profielkop{gap:10px}.lvls li{grid-template-columns:minmax(0,1.2fr) .8fr 58px}}
+.profiel .tablebox{overflow-x:visible}
 </style>
 </head>
 <body>
@@ -250,7 +306,7 @@ const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice
 const klok=d=>d.toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
-let D,archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
+let D,spelerTag=null,spelerData={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
 const clanVan=t=>D.clans.find(c=>c.tag===t);
 function schild(nr,maat=40){const c=nr?D?.clans.find(x=>x.nr===nr):null;
  if(c?.logo)return `<img class="logo" src="${esc(c.logo)}" width="${maat}" height="${maat}" alt="${esc(c.naam)}" loading="lazy">`;
@@ -291,7 +347,7 @@ function sterRij(a){const n=a?.sterren??0,k=!a?"leeg":n===3?"s3":n===2?"s2":n===
 function ledenLijst(c,w){const per=w.perLid||1,leden=w.leden||[],nog=leden.filter(m=>m.aanvallen.length<per).length;
  const tekst=w.status==="inWar"?(nog?`${nog} van ${leden.length} moeten nog aanvallen`:"Iedereen heeft aangevallen"):w.status==="preparation"?`Opstelling (${leden.length} spelers)`:"Aanvallen per speler";
  return `<details class="open" data-lijst="${esc(c.tag)}"${dichteLijst.has(c.tag)?"":" open"}><summary>${tekst}</summary><ol class="leden">${leden.map((m,i)=>{const klaar=m.aanvallen.length>=per,rijen=[];for(let j=0;j<per;j++)rijen.push(sterRij(m.aanvallen[j]));
-  return `<li><span class="rang ${w.status==="preparation"?"":klaar?"ja":"nee"}">${i+1}</span><span class="sn">${esc(m.naam)}</span><span class="ats">${rijen.join("")}</span></li>`}).join("")}</ol></details>`}
+  return `<li><span class="rang ${w.status==="preparation"?"":klaar?"ja":"nee"}">${i+1}</span>${m.tag?`<button class="naam sn" data-speler="${esc(m.tag.slice(1))}">${esc(m.naam)}</button>`:`<span class="sn">${esc(m.naam)}</span>`}<span class="ats">${rijen.join("")}</span></li>`}).join("")}</ol></details>`}
 function rondeKnoppen(c,rondes,keuze){let r="";for(let i=1;i<=7;i++){const w=rondes[i],o=w&&w.status==="warEnded"?oordeel(w)[0]:"",k=!w?"":w.status==="inWar"?"bezig":w.status==="preparation"?"voor":o;
  const uitleg=!w?"nog niet bekend":w.status==="inWar"?"bezig":w.status==="preparation"?"voorbereiding":w.status==="warEnded"?(o==="win"?"gewonnen":o==="ver"?"verloren":"gelijkspel"):"einde niet gezien";
  r+=`<button class="${k}" data-kclan="${esc(c.tag)}" data-ronde="${i}"${w?"":" disabled"} aria-label="Ronde ${i}, ${uitleg}" title="Ronde ${i}: ${uitleg}"${i===keuze?' aria-current="true"':""}>${i}</button>`}
@@ -320,7 +376,7 @@ function verwerkLive(w,raw){if(raw.endTime!==w.einde||!raw.state)return;
  Object.assign(w.tegenstander,{stars:zij.stars,destructionPercentage:zij.destructionPercentage,aanvallen:zij.attacks??hun.length});
  Object.assign(w,{status:raw.state,perLid:per,gebruikt:mijn.length,totaal:leden.length*per,gemTijdOns:gemDuur(mijn),gemTijdZij:gemDuur(hun),
   maxOns:maxSterren(ons.stars||0,Math.max(0,grootte*per-mijn.length),kaart(mijn),grootte),maxZij:maxSterren(zij.stars||0,Math.max(0,grootte*per-hun.length),kaart(hun),grootte),
-  leden:leden.map(m=>({naam:m.name,pos:m.mapPosition,aanvallen:(m.attacks||[]).map(a=>({sterren:a.stars,procent:a.destructionPercentage}))})),
+  leden:leden.map(m=>({tag:m.tag,naam:m.name,pos:m.mapPosition,aanvallen:(m.attacks||[]).map(a=>({sterren:a.stars,procent:a.destructionPercentage}))})),
   open:leden.filter(m=>(m.attacks||[]).length<per).map(m=>({naam:m.name,over:per-(m.attacks||[]).length}))})}
 async function cwlLive(){const clans=D.clans.filter(c=>c.cwl?.rondes);if(!clans.length)return false;
  const tags=[...new Set(clans.flatMap(c=>Object.values(c.cwl.rondes).flatMap(r=>Object.entries(r).filter(([,w])=>w.status!=="warEnded").map(([t])=>t))))];
@@ -362,7 +418,7 @@ function cwlTabel(k){if(!k.cwl.rondes)return k.cwl.stand||[];const t={};(k.cwl.c
  return rijen}
 function vooruitzicht(r,op,neer,n){return {promotie:op===0?"n.v.t.":r.besteplek<=op?"Haalbaar":"Niet meer haalbaar",handhaving:neer===0||r.slechtsteplek<=n-neer?"Zeker":"Niet zeker"}}
 function overzichtView(){const c=[...D.clans].filter(x=>x.cwl?.rondes||x.cwl?.stand?.length).sort((a,b)=>(a.nr||0)-(b.nr||0));if(!c.length)return"";
- const rond=[1,2,3,4,5,6,7],getal=v=>Math.round(v||0).toLocaleString("nl-NL");
+ const rond=[1,2,3,4,5,6,7];
  return `<section class="sectie"><h2>CWL-tussenstand</h2>${c.map(k=>{const[op,neer]=plekken(k.warLeague),stand=cwlTabel(k),n=stand.length;
  return `<article class="cwlgroep"><div class="vakkop">${schild(k.nr,32)}<h3>${esc(k.naam)}</h3><span class="teller">${esc((k.warLeague??"").replace(" League",""))}</span></div>${(()=>{const e=stand.find(r=>r.tag===k.tag);if(!e)return"";const v=vooruitzicht(e,op,neer,n);return `<p class="vooruit"><span>Promotie: <b class="${v.promotie==="Niet meer haalbaar"?"nee":"ja"}">${v.promotie.toLowerCase()}</b></span><span>Handhaving: <b class="${v.handhaving==="Zeker"?"ja":"nee"}">${v.handhaving.toLowerCase()}</b></span><span>Mogelijke eindplek: <b>${e.besteplek===e.slechtsteplek?e.besteplek:`${e.besteplek} t/m ${e.slechtsteplek}`}</b></span></p>`})()}
  <div class="tablebox"><table class="cwlstand"><thead><tr><th><span class="kp">#</span></th><th><span class="kp">Clan</span></th>${rond.map(r=>`<th class="n opt"><span class="kp">${r}</span></th>`).join("")}<th class="n opt"><span class="kp">Aanv.</span></th><th class="n"><span class="kp">Vernietigd</span></th><th class="n opt"><span class="kp">Sterren</span></th><th class="n opt"><span class="kp">Bonus</span></th><th class="n"><span class="kp">Totaal</span></th><th class="n opt"><span class="kp">3★</span></th><th class="n opt"><span class="kp">2★</span></th><th class="n opt"><span class="kp">1★</span></th><th class="n opt"><span class="kp">0★</span></th><th class="opt"><span class="kp">Promotie</span></th><th class="opt"><span class="kp">Handhaving</span></th></tr></thead><tbody>
@@ -390,15 +446,16 @@ function zichtbaar(){const l=D.players.filter(p=>{
  const e=v=>v==null||v==="";
  return [...l].sort((a,b)=>{const x=waarde(a,sort.k),y=waarde(b,sort.k);if(e(x)&&e(y))return 0;if(e(x))return 1;if(e(y))return -1;return (typeof x==="string"?x.localeCompare(y,"nl"):x-y)*sort.dir})}
 function rijen(){return zichtbaar().map(p=>{const d=p.d||{},m=p.cw?.moest??0,mis=p.cw?.gemis??0,i=encodeURIComponent(p.tag),c=p.inClan?clanVan(p.clanTag):null;
- return `<tr><td><div class="speler">${schild(c?.nr,20)}<button class="naam" data-open="${i}" aria-expanded="${open.has(p.tag)}">${esc(p.naam)}</button></div></td>
+ return `<tr><td><div class="speler">${schild(c?.nr,20)}<button class="naam" data-speler="${p.tag.slice(1)}">${esc(p.naam)}</button></div></td>
  <td class="opt">${sindsTekst(p)}</td><td class="n opt">${p.th??"–"}</td><td>${esc(p.league)}${d.l?delta(d.l):""}</td>
  <td class="n opt">${p.helden}${delta(d.h)}</td><td class="n opt">${p.dieren}${delta(d.p)}</td><td class="n opt">${p.equip}${delta(d.e)}</td>
  <td class="n"><span class="tal ${laag(p)?"bad":""}">${m}</span></td><td class="n"><span class="${mis?"tal bad":""}">${mis}</span></td><td class="n ster">${gem(p)!=null?gem(p).toFixed(2):"–"}</td></tr>${open.has(p.tag)?detail(p,COLS.length):""}`}).join("")}
 function kop(){return COLS.map(([k,t,n,o,kort])=>`<th class="${n?"n ":""}${o?"opt":""}" aria-sort="${sort.k===k?(sort.dir>0?"ascending":"descending"):"none"}"><button data-k="${k}">${kort?`<span class="lang">${t}</span><span class="kort">${kort}</span>`:t}</button></th>`).join("")}
+function chip(soort,waarde,label,actief,c){return `<button class="chip" data-${soort}="${esc(waarde)}" aria-pressed="${actief===waarde}">${c?schild(c.nr,20):""}${esc(label)}</button>`}
 function spelersView(){return `<section class="sectie"><h2>Alle leden</h2>
- <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Rood bij Moest doen is minder dan ${D.grensAanvallen} aanvallen. ${D.maanden.length<2?"Groei per maand zie je vanaf volgende maand.":"Groen en rood onder een getal is de groei sinds vorige maand."} Bij ons sinds is de eerste bekende maand in een van onze clans. De geschiedenis begint in ${MND[new Date(D.sindsBegin).getUTCMonth()]} ${new Date(D.sindsBegin).getUTCFullYear()}. Tik op een naam voor meer.</p>
+ <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Tik op een naam voor het profiel.</p>
  <div class="tools"><input id="zoek" type="search" placeholder="Zoek lid" aria-label="Zoek lid" value="${esc(zoek)}">
- <select id="clanf" aria-label="Filter op clan"><option value="">Alle clans</option>${D.clans.map(c=>`<option value="${esc(c.tag)}"${clanFilter===c.tag?" selected":""}>${esc(c.naam)}</option>`).join("")}<option value="uit"${clanFilter==="uit"?" selected":""}>Buiten onze clans</option></select>
+ </div><div class="chips">${chip("cf","","Alle clans",clanFilter)}${[...D.clans].sort((a,b)=>a.nr-b.nr).map(c=>chip("cf",c.tag,c.naam,clanFilter,c)).join("")}${chip("cf","uit","Buiten onze clans",clanFilter)}</div><div class="tools">
  <select id="filter" aria-label="Filter spelers"><option value="">Alle leden</option><option value="laag"${filter==="laag"?" selected":""}>Onder ${D.grensAanvallen} aanvallen</option><option value="gemist"${filter==="gemist"?" selected":""}>Met gemiste aanvallen</option></select>
  <span class="teller" id="teller"></span></div>
  <div class="tablebox"><table><thead><tr id="kop">${kop()}</tr></thead><tbody id="rijen">${rijen()}</tbody></table></div></section>`}
@@ -413,14 +470,14 @@ function slot(n,v,bezet){const p=bezet[n],nr=n-v.van+1;let mid;
  if(bewerk){const opt=q=>`<option value="${pid(q)}"${q===p?" selected":""}>${esc(q.naam)}${K(q).plek!=null&&q!==p?` (${plekNaam(K(q).plek)})`:""}</option>`;
   const vrij=D.players.filter(q=>K(q).plek==null),in_=D.players.filter(q=>K(q).plek!=null);
   mid=`<select data-slot="${n}" aria-label="Clan ${ROMEINS[v.nr]} plek ${nr}"><option value="">Leeg</option><optgroup label="Reserve">${vrij.map(opt).join("")}</optgroup><optgroup label="Ingedeeld">${in_.map(opt).join("")}</optgroup></select>`}
- else mid=p?`<span class="sn">${esc(p.naam)}</span>`:'<span class="weg">Leeg</span>';
+ else mid=p?`<button class="naam sn" data-speler="${pid(p)}">${esc(p.naam)}</button>`:'<span class="weg">Leeg</span>';
  return `<li><span class="nr">${nr}</span>${mid}${!bewerk&&p?`<span class="ster">${gem(p)!=null?gem(p).toFixed(2):""}</span>`:""}</li>`}
 function letOp(){const ing=D.players.filter(p=>K(p).plek!=null),m=[],n=l=>l.map(p=>esc(p.naam)).join(", ");
  const a=ing.filter(p=>K(p).appgroep==="Nee");if(a.length)m.push(`Ingedeeld maar niet in de appgroep: ${n(a)}`);
  const b=ing.filter(p=>K(p).keuze==="Nee");if(b.length)m.push(`Ingedeeld met keuze Nee: ${n(b)}`);
  const c=ing.filter(laag);if(c.length)m.push(`Ingedeeld met te weinig aanvallen: ${n(c)}`);
  return m.length?`<div class="letop"><h3>Let op</h3><ul>${m.map(x=>`<li>${x}</li>`).join("")}</ul></div>`:""}
-function keuzeRijen(){const z=oorlogZoek;return D.players.filter(p=>!z||p.naam.toLowerCase().includes(z)).sort((a,b)=>(K(a).plek??1e9)-(K(b).plek??1e9)||a.naam.localeCompare(b.naam,"nl")).map(p=>`<tr><td><div class="speler">${schild(p.inClan?clanVan(p.clanTag)?.nr:0,20)}<span class="sn">${esc(p.naam)}</span></div></td><td>${keuzeSelect(p,"appgroep",["Ja","Nee"])}</td><td>${keuzeSelect(p,"aanmelding",["Ja","Nee"])}</td><td>${keuzeSelect(p,"keuze",KEUZES)}</td><td class="opt">${esc(plekNaam(K(p).plek))||'<span class="weg">Reserve</span>'}</td></tr>`).join("")}
+function keuzeRijen(){const z=oorlogZoek;return D.players.filter(p=>!z||p.naam.toLowerCase().includes(z)).sort((a,b)=>(K(a).plek??1e9)-(K(b).plek??1e9)||a.naam.localeCompare(b.naam,"nl")).map(p=>`<tr><td><div class="speler">${schild(p.inClan?clanVan(p.clanTag)?.nr:0,20)}<button class="naam sn" data-speler="${pid(p)}">${esc(p.naam)}</button></div></td><td>${keuzeSelect(p,"appgroep",["Ja","Nee"])}</td><td>${keuzeSelect(p,"aanmelding",["Ja","Nee"])}</td><td>${keuzeSelect(p,"keuze",KEUZES)}</td><td class="opt">${esc(plekNaam(K(p).plek))||'<span class="weg">Reserve</span>'}</td></tr>`).join("")}
 function opstellingView(){const bezet={};D.players.forEach(p=>{if(K(p).plek!=null)bezet[K(p).plek]=p});
  const res=D.players.filter(p=>K(p).plek==null);
  const knoppen=bewerk?`<button class="knop" data-actie="opslaan"${gewijzigd?"":" disabled"}>Wijzigingen opslaan${gewijzigd?` (${gewijzigd})`:""}</button><button class="knop licht" data-actie="stop">Stop met bewerken</button><button class="knop licht" data-actie="vergeet">Sleutel vergeten</button>`:`<button class="knop" data-kopieer="opsttekst">Kopieer voor de appgroep</button><button class="knop licht" data-actie="bewerk">Opstelling bewerken</button>`;
@@ -448,12 +505,40 @@ async function laadArchief(){if(archief)return;try{const r=await fetch("data/arc
 function oorlogenView(){laadArchief();const eigen=D.oorlogen.filter(x=>x.status==="warEnded"||x.status==="onvolledig"),bekend=new Set(eigen.map(x=>x.clan.tag+x.einde));
  const alles=[...eigen,...(archief||[]).filter(x=>!bekend.has(x.clan.tag+x.einde))];
  const w=alles.filter(x=>(!oorlogClan||x.clan.tag===oorlogClan)&&(!oorlogSoort||x.soort===oorlogSoort)).sort((a,b)=>(b.einde||"").localeCompare(a.einde||""));
- const keuze=`<div class="tools"><select id="oorlogclan" aria-label="Filter op clan"><option value="">Alle clans</option>${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(c=>`<option value="${esc(c.tag)}"${oorlogClan===c.tag?" selected":""}>${esc(c.naam)}</option>`).join("")}</select><select id="oorlogsoort" aria-label="Filter op soort oorlog"><option value="">CW en CWL</option><option value="oorlog"${oorlogSoort==="oorlog"?" selected":""}>CW</option><option value="cwl"${oorlogSoort==="cwl"?" selected":""}>CWL</option></select><span class="teller">${w.length} oorlogen</span></div>`;
+ const som={win:0,open:0,ver:0};w.forEach(x=>{const o=x.status==="warEnded"?oordeel(x)[0]:null;if(o)som[o]++});
+ const keuze=`<div class="chips">${chip("of","","Alle clans",oorlogClan)}${[...D.clans].sort((a,b)=>a.nr-b.nr).map(c=>chip("of",c.tag,c.naam,oorlogClan,c)).join("")}</div><div class="chips">${chip("os","","CW en CWL",oorlogSoort)}${chip("os","oorlog","CW",oorlogSoort)}${chip("os","cwl","CWL",oorlogSoort)}</div>
+ <div class="tegels"><div class="tegel"><b>${w.length}</b>oorlogen</div><div class="tegel t-win"><b>${som.win}</b>gewonnen</div><div class="tegel t-g"><b>${som.open}</b>gelijk</div><div class="tegel t-ver"><b>${som.ver}</b>verloren</div><div class="tegel"><b>${w.length?Math.round(100*som.win/w.length):0}%</b>winst</div></div>`;
  if(!w.length)return `<section class="sectie"><h2>Uitslagen</h2>${keuze}<p class="uitleg">Geen afgelopen oorlogen gevonden. Lopende oorlogen staan op de statuspagina.</p></section>`;
  return `<section class="sectie"><h2>Uitslagen</h2>${keuze}<div class="lijst">${w.slice(0,oorlogAantal).map(x=>{const c=clanVan(x.clan.tag),a=x.clan.stars??0,b=x.tegenstander.stars??0,heel=x.status==="warEnded",o=heel?oordeel(x):null,kl=o?.[0]==="win"?"win":o?.[0]==="ver"?"ver":"";
-  return `<article class="uitslag">${schild(c?.nr,32)}<div class="wie"><b>tegen ${esc(x.tegenstander.name)}</b><span>${x.soort==="cwl"?`CWL ronde ${x.ronde??"?"}`:"Clanoorlog"}, ${datum(iso(x.start))}</span></div>
+  return `<article class="uitslag ${kl?"r-"+kl:"r-g"}">${schild(c?.nr,32)}<div class="wie"><b>tegen ${esc(x.tegenstander.name)}</b><span>${x.soort==="cwl"?`CWL ronde ${x.ronde??"?"}`:"Clanoorlog"}, ${datum(iso(x.start))}</span></div>
   <div class="sc ${kl}">${a} – ${b}<small>${o?o[1]:"Einde niet gezien"}, ${x.gebruikt}/${x.totaal}</small></div></article>`}).join("")}</div>${w.length>oorlogAantal?`<button class="knop licht" data-actie="meer">Toon meer oorlogen</button>`:""}</section>`}
 
+const getal=v=>Math.round(v||0).toLocaleString("nl-NL");
+const pctTekst=(a,b)=>b?Math.round(100*a/b)+"%":"–";
+const gemTekst=(a,b)=>b?(a/b).toFixed(2).replace(".",","):"–";
+function balkRij(x){const p=x.max?Math.round(100*x.lvl/x.max):100;return `<li><span class="sn">${esc(x.naam)}</span><span class="lvlbar ${x.max&&x.lvl>=x.max?"vol":""}"><i style="width:${p}%"></i></span><b>${x.lvl}${x.max?`/${x.max}`:""}</b></li>`}
+function tegel(w,l,k=""){return `<div class="tegel ${k}"><b>${w}</b>${esc(l)}</div>`}
+function laadSpeler(tag){if(spelerData[tag]!==undefined)return;spelerData[tag]=null;fetch(`data/speler/${tag}.json`,{cache:"no-store"}).then(r=>r.ok?r.json():{fout:1}).catch(()=>({fout:1})).then(d=>{spelerData[tag]=d;if(tab==="speler"&&spelerTag===tag)render()})}
+function spelerView(){const tag=spelerTag,z=spelerData[tag];laadSpeler(tag);const p=D.players.find(x=>x.tag==="#"+tag);
+ const terug='<button class="knop licht terug" data-terug>Terug</button>';
+ if(!p)return `<section class="sectie">${terug}<p class="uitleg">Deze speler staat niet in onze gegevens.</p></section>`;
+ const c=p.inClan?clanVan(p.clanTag):null,cw=p.cw||{},m=cw.moest||0;
+ const kop=`<div class="profielkop paneel">${schild(c?.nr,84)}<div class="pk"><h2>${esc(p.naam)}</h2><p class="uitleg">${p.inClan?esc(p.clan):"Buiten onze clans"}${p.rol?`, ${esc(p.rol)}`:""}</p><div class="labels"><span class="label goud">TH ${p.th??"–"}</span><span class="label">${esc(p.league)}</span>${z?.xp?`<span class="label">Level ${z.xp}</span>`:""}<span class="label">Bij ons sinds ${esc(sindsTekst(p))}</span><span class="label">${esc(p.tag)}</span></div></div></div>`;
+ const tegels=`<div class="tegels">${tegel(m,"moest doen")}${tegel(cw.aanv??0,"gedaan")}${tegel(cw.gemis??0,"niet gedaan",cw.gemis?"t-ver":"")}${tegel(cw.gem!=null?cw.gem.toFixed(2).replace(".",","):"–","gem. sterren","t-goud")}${tegel(cw.drieProcent!=null?Math.round(cw.drieProcent)+"%":"–","3 sterren")}${tegel(cw.oorlogen??0,"oorlogen")}</div>`;
+ if(!z||z.fout)return `<section class="sectie">${terug}${kop}${tegels}<p class="uitleg">${z?"Verdere gegevens van deze speler zijn er nog niet. Die komen bij de volgende ophaalronde.":"Laden…"}</p></section>`;
+ const so=z.perSoort,rij=(n,k)=>`<tr><th scope="row">${n}</th><td class="n">${k.oorlogen}</td><td class="n">${k.moest}</td><td class="n">${k.aanv}</td><td class="n">${Math.max(0,k.moest-k.aanv)}</td><td class="n ster">${gemTekst(k.sterren,k.aanv)}</td><td class="n">${pctTekst(k.drie,k.aanv)}</td></tr>`;
+ const d=z.verdediging,aanval=z.aanvallen.slice(0,60).map(a=>`<tr><td>${datum(iso(a.datum))}</td><td class="opt">${a.soort==="cwl"?`CWL ${a.ronde??""}`:"CW"}</td><td class="opt"><span class="sn blok">${esc(a.tegen)}</span></td><td><span class="sn blok">${esc(a.doel??"Onbekend")}</span>${a.doelTh?`<span class="d">TH ${a.doelTh}</span>`:""}</td><td>${sterRij({sterren:a.sterren,procent:a.procent})}</td><td class="n opt">${mmss(a.duur)}</td></tr>`).join("");
+ const groei=[spark(p,0,"Helden"),spark(p,1,"Dieren"),spark(p,2,"Equipment")].join("");
+ return `<section class="sectie">${terug}${kop}${tegels}
+ <div class="profiel"><div class="paneel"><h3>Oorlogen, laatste ${D.vensterDagen} dagen</h3><div class="tablebox plat"><table><thead><tr><th><span class="kp">Soort</span></th><th class="n"><span class="kp">Oorlogen</span></th><th class="n"><span class="kp">Moest</span></th><th class="n"><span class="kp">Gedaan</span></th><th class="n"><span class="kp">Mis</span></th><th class="n"><span class="kp">Gem ★</span></th><th class="n"><span class="kp">3★</span></th></tr></thead><tbody>${rij("CW",so.oorlog)}${rij("CWL",so.cwl)}</tbody></table></div></div>
+ <div class="paneel"><h3>Verdediging, laatste ${D.vensterDagen} dagen</h3><div class="tegels klein">${tegel(d.keer,"keer aangevallen")}${tegel(gemTekst(d.sterren,d.keer),"sterren tegen","t-goud")}${tegel(pctTekst(d.drie,d.keer),"3 sterren tegen")}</div></div>
+ <div class="paneel"><h3>Helden</h3><ul class="lvls">${z.helden.map(balkRij).join("")}</ul></div>
+ <div class="paneel"><h3>Dieren</h3><ul class="lvls">${z.dieren.map(balkRij).join("")||'<li class="weg">Geen dieren</li>'}</ul></div>
+ <div class="paneel"><h3>Beste equipment</h3><ul class="lvls">${z.equipment.slice(0,8).map(balkRij).join("")}</ul></div>
+ <div class="paneel"><h3>Carrière</h3><div class="tegels klein">${tegel(getal(z.warSterren),"oorlogssterren","t-goud")}${tegel(getal(z.besteTrofeeen),"beste trofeeën")}${tegel(getal(z.donaties),"gedoneerd")}${tegel(getal(z.ontvangen),"ontvangen")}${tegel(getal(z.kapitaal),"clankapitaal")}</div></div></div>
+ ${groei?`<div class="paneel"><h3>Groei</h3><div class="dgrid">${groei}</div></div>`:""}
+ ${z.gemist.length?`<div class="paneel"><h3>Gemiste aanvallen</h3><ul class="gemist">${z.gemist.map(g=>`<li>${datum(iso(g.datum))}: ${g.aantal} tegen ${esc(g.tegen)} (${g.soort==="cwl"?"CWL":"CW"})</li>`).join("")}</ul></div>`:""}
+ <div class="paneel"><h3>Aanvallen</h3>${aanval?`<div class="tablebox plat"><table><thead><tr><th><span class="kp">Datum</span></th><th class="opt"><span class="kp">Soort</span></th><th class="opt"><span class="kp">Tegen clan</span></th><th><span class="kp">Doel</span></th><th><span class="kp">Resultaat</span></th><th class="n opt"><span class="kp">Tijd</span></th></tr></thead><tbody>${aanval}</tbody></table></div>`:'<p class="uitleg">Geen aanvallen in deze periode.</p>'}</div></section>`}
 function berichten(){const uit=[];
  D.oorlogen.filter(w=>w.status==="inWar").forEach(w=>{const namen=w.open.map(o=>`- ${o.naam}${o.over>1?` (${o.over} over)`:""}`).join("\n");
   uit.push([`Herinnering ${w.clan.name}`,`⚔️ ${w.clan.name} tegen ${w.tegenstander.name}\nStand: ${w.clan.stars} - ${w.tegenstander.stars}\nDe oorlog eindigt ${klok(tijd(w.einde))}.\n\n${namen?"Nog aanvallen:\n"+namen:"Iedereen heeft aangevallen. Top!"}`])});
@@ -466,13 +551,19 @@ function berichten(){const uit=[];
 function berichtenView(){const b=berichten();
  return `<section class="sectie"><h2>Berichten voor de appgroep</h2>${b.length?`<div class="berichten">${b.map(([t,x],i)=>`<article class="bericht"><h3>${esc(t)}</h3><textarea id="b${i}" rows="${Math.min(x.split("\n").length+1,16)}" readonly aria-label="${esc(t)}">${esc(x)}</textarea><button class="knop" data-kopieer="b${i}">Kopieer bericht</button></article>`).join("")}</div>`:'<p class="uitleg">Er zijn nu geen berichten om te delen.</p>'}</section>`}
 
-function nav(){$("nav").innerHTML=TABS.map(([k,t])=>`<button data-tab="${k}"${tab===k?' aria-current="page"':""}>${t}</button>`).join("")}
+function route(){const h=decodeURIComponent(location.hash.slice(1));if(h.startsWith("speler/")){spelerTag=h.slice(7);tab="speler";return}tab=TABS.some(x=>x[0]===h)?h:"overzicht"}
+function nav(){const actief=tab==="speler"?"spelers":tab;$("nav").innerHTML=TABS.map(([k,t])=>`<button data-tab="${k}"${actief===k?' aria-current="page"':""}>${t}</button>`).join("")}
 function merk(){const c=D.clans.find(x=>x.nr===1);if(!c)return;$("merknaam").textContent=c.naam;if(c.logo)$("merklogo").outerHTML=`<img id="merklogo" class="logo" src="${esc(c.logo)}" width="44" height="44" alt="">`}
-function render(){merk();nav();$("muur").innerHTML=tab==="overzicht"?muur():"";document.querySelector(".wall").classList.toggle("laag",tab!=="overzicht");$("voet").textContent=`Bijgewerkt ${klok(new Date(D.bijgewerkt))}. `;$("inhoud").innerHTML={overzicht:overzichtView,spelers:spelersView,opstelling:opstellingView,oorlogen:oorlogenView,berichten:berichtenView}[tab]();if(tab==="spelers")teller()}
+function render(){merk();nav();$("muur").innerHTML=tab==="overzicht"?muur():"";document.querySelector(".wall").classList.toggle("laag",tab!=="overzicht");$("voet").textContent=`Bijgewerkt ${klok(new Date(D.bijgewerkt))}. `;$("inhoud").innerHTML={overzicht:overzichtView,spelers:spelersView,opstelling:opstellingView,oorlogen:oorlogenView,berichten:berichtenView,speler:spelerView}[tab]();if(tab==="spelers")teller()}
 function teller(){$("teller").textContent=`${zichtbaar().length} leden`}
 function tabel(){$("rijen").innerHTML=rijen();$("kop").innerHTML=kop();teller()}
 
-addEventListener("click",async e=>{const t=e.target.closest("[data-tab]");if(t){tab=t.dataset.tab;history.replaceState(null,"","#"+tab);render();return}
+addEventListener("click",async e=>{const t=e.target.closest("[data-tab]");if(t){if(t.dataset.tab===tab)return;location.hash=t.dataset.tab;return}
+ const sp=e.target.closest("[data-speler]");if(sp){location.hash="speler/"+sp.dataset.speler;return}
+ if(e.target.closest("[data-terug]")){history.length>1?history.back():location.hash="spelers";return}
+ const cf=e.target.closest("[data-cf]");if(cf){clanFilter=cf.dataset.cf;render();return}
+ const of=e.target.closest("[data-of]");if(of){oorlogClan=of.dataset.of;oorlogAantal=100;render();return}
+ const os=e.target.closest("[data-os]");if(os){oorlogSoort=os.dataset.os;oorlogAantal=100;render();return}
  const rd=e.target.closest("[data-ronde]");if(rd){const f=document.querySelector(".front")?.scrollLeft;rondeKeuze[rd.dataset.kclan]=+rd.dataset.ronde;render();document.querySelector(".front").scrollLeft=f;return}
  const k=e.target.closest("[data-k]");if(k){const c=k.dataset.k;if(sort.k===c)sort.dir*=-1;else sort={k:c,dir:c==="naam"?1:-1};tabel();return}
  const o=e.target.closest("[data-open]");if(o){const i=decodeURIComponent(o.dataset.open);open.has(i)?open.delete(i):open.add(i);tabel();return}
@@ -493,10 +584,10 @@ addEventListener("change",e=>{if(e.target.id==="filter"){filter=e.target.value;t
  const t=e.target;if(t.dataset.veld){zetKeuze(t.dataset.p,t.dataset.veld,t.value);render()}
  if(t.dataset.slot){const n=+t.dataset.slot,nieuw=t.value,oud=D.players.find(p=>K(p).plek===n);if(oud&&pid(oud)===nieuw)return;
   const herkomst=nieuw?(L.spelers[nieuw]?.plek??null):null;if(oud)zetKeuze(pid(oud),"plek",herkomst);if(nieuw)zetKeuze(nieuw,"plek",n);render()}});
-addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(D&&TABS.some(x=>x[0]===h)&&h!==tab){tab=h;render()}});
+addEventListener("hashchange",()=>{if(!D)return;route();render();scrollTo(0,0)});
 
 async function laadLeiding(){try{const r=await fetch("data/leiding.json",{cache:"no-store"});if(r.ok)L=await r.json()}catch{}}
-(async()=>{const h=location.hash.slice(1);if(TABS.some(x=>x[0]===h))tab=h;nav();
+(async()=>{route();nav();
  try{const r=await fetch("data/latest.json",{cache:"no-store"});if(!r.ok)throw new Error(r.status);D=await r.json();await laadLeiding();render();try{const l=await fetch("data/live.json",{cache:"no-store"});if(l.ok)liveUrl=(await l.json()).url?.replace(/\/$/,"")||null;ververs()}catch{}
   if((Date.now()-new Date(D.bijgewerkt))/36e5>12)$("inhoud").insertAdjacentHTML("afterbegin",'<p class="melding" style="margin-bottom:18px">Deze gegevens zijn ouder dan 12 uur. Controleer de workflow in GitHub Actions.</p>')}
  catch{$("inhoud").innerHTML='<p class="melding">De clandata kon niet worden geladen. Vernieuw de pagina om het opnieuw te proberen.</p>'}})();
