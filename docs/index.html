@@ -289,6 +289,7 @@ input,select{background:#0F2A66;border-color:#2E4F99}
 .rs-mid{font-size:12px;text-align:center;color:var(--muted)}
 .cwlgroep .rondes{max-width:360px}
 @media (max-width:560px){.rondeoorlog{grid-template-columns:1fr}.rs-mid{order:-1}}
+.verwachtuitleg{grid-column:1/-1;margin:0}
 </style>
 </head>
 <body>
@@ -317,7 +318,7 @@ const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice
 const klok=d=>d.toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
-let D,cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
+let D,indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
 const clanVan=t=>D.clans.find(c=>c.tag===t);
 function schild(nr,maat=40){const c=nr?D?.clans.find(x=>x.nr===nr):null;
  if(c?.logo)return `<img class="logo" src="${esc(c.logo)}" width="${maat}" height="${maat}" alt="${esc(c.naam)}" loading="lazy">`;
@@ -428,15 +429,32 @@ function cwlTabel(k){if(!k.cwl.rondes)return k.cwl.stand||[];const t={};(k.cwl.c
  rijen.forEach(r=>{const anderen=rijen.filter(x=>x!==r);r.besteplek=1+anderen.filter(x=>x.laagst>r.hoogst).length;r.slechtsteplek=1+anderen.filter(x=>x.hoogst>=r.laagst).length});
  return rijen}
 function vooruitzicht(r,op,neer,n){return {promotie:op===0?"n.v.t.":r.besteplek<=op?"Haalbaar":"Niet meer haalbaar",handhaving:neer===0||r.slechtsteplek<=n-neer?"Zeker":"Niet zeker"}}
+// Elke CWL-groep volgt hetzelfde vaste rondeschema; alleen de nummering van de clans verschilt.
+const SCHEMA=[[[0,4],[1,3],[2,7],[5,6]],[[0,7],[1,6],[2,5],[3,4]],[[0,1],[2,4],[3,6],[5,7]],[[0,3],[1,2],[4,5],[6,7]],[[0,2],[1,7],[3,5],[4,6]],[[0,6],[1,5],[2,3],[4,7]],[[0,5],[1,4],[2,6],[3,7]]];
+const paarSleutel=(a,b)=>a<b?a+"|"+b:b+"|"+a;
+function indelingen(k){const tags=(k.cwl.clans||[]).map(c=>c.tag);if(tags.length!==8)return [];
+ const bekend=Object.entries(k.cwl.rondes||{}).map(([n,r])=>({n:+n,paren:Object.values(r).filter(w=>w.kanten).map(w=>paarSleutel(w.kanten[0].tag,w.kanten[1].tag))})).filter(x=>x.paren.length===4);
+ const sleutel=k.tag+bekend.map(x=>x.n).join();if(indelingCache[sleutel])return indelingCache[sleutel];
+ const uit=[],nu=Array(8),vrij=new Set(tags),ok=()=>bekend.every(b=>SCHEMA[b.n-1].every(([x,y])=>b.paren.includes(paarSleutel(nu[x],nu[y]))));
+ (function zet(i){if(i===8){if(ok())uit.push([...nu]);return}for(const t of [...vrij]){nu[i]=t;vrij.delete(t);zet(i+1);vrij.add(t)}})(0);
+ return indelingCache[sleutel]=uit}
+function verwachteRonde(k,n){const opties=indelingen(k);if(!opties.length)return null;const tel={};
+ opties.forEach(o=>SCHEMA[n-1].forEach(([x,y])=>{const p=paarSleutel(o[x],o[y]);tel[p]=(tel[p]||0)+1}));
+ const eigen=[...new Set(opties.map(o=>{const[x,y]=SCHEMA[n-1].find(p=>o[p[0]]===k.tag||o[p[1]]===k.tag);return o[x]===k.tag?o[y]:o[x]}))];
+ return {zeker:Object.entries(tel).filter(([,v])=>v===opties.length).map(([p])=>p.split("|")),eigen,opties:opties.length}}
 function huidigeRonde(k){const r=k.cwl.rondes||{},ns=Object.keys(r).map(Number).sort((a,b)=>a-b);
  return ns.find(n=>Object.values(r[n]).some(w=>w.status==="inWar"))??ns.filter(n=>Object.values(r[n]).some(w=>w.status!=="preparation")).pop()??ns[0]}
 function eigenUitkomst(k,n){const w=Object.values(k.cwl.rondes?.[n]||{}).find(x=>x.kanten?.some(o=>o.tag===k.tag));if(!w)return Object.keys(k.cwl.rondes?.[n]||{}).length?"voor":"";if(w.status==="preparation")return "voor";const o=w.kanten.find(x=>x.tag===k.tag),z=w.kanten.find(x=>x.tag!==k.tag),u=uitkomst(w,o,z);return {w:"win",v:"ver",g:"open",bezig:"bezig"}[u]}
 function rondeView(k){const clan=Object.fromEntries((k.cwl.clans||[]).map(c=>[c.tag,c])),n=cwlRonde[k.tag]??huidigeRonde(k),oorlogen=Object.values(k.cwl.rondes?.[n]||{}).filter(w=>w.kanten);
  oorlogen.sort((a,b)=>(b.kanten.some(o=>o.tag===k.tag)?1:0)-(a.kanten.some(o=>o.tag===k.tag)?1:0));
- const knoppen=[1,2,3,4,5,6,7].map(i=>{const heeft=k.cwl.rondes?.[i];return `<button class="${eigenUitkomst(k,i)}" data-cwlr="${esc(k.tag)}" data-n="${i}"${heeft?"":" disabled"}${i===n?' aria-current="true"':""} aria-label="Ronde ${i}">${i}</button>`}).join("");
+ const knoppen=[1,2,3,4,5,6,7].map(i=>{const heeft=k.cwl.rondes?.[i];return `<button class="${eigenUitkomst(k,i)}" data-cwlr="${esc(k.tag)}" data-n="${i}"${i===n?' aria-current="true"':""} aria-label="Ronde ${i}">${i}</button>`}).join("");
  const kant=(o,u,per)=>{const c=clan[o.tag]||{};return `<div class="rk ${u==="w"?"w":u==="v"?"v":""} ${o.tag===k.tag?"wij":""}">${c.logo?`<img class="logo" src="${esc(c.logo)}" width="30" height="30" alt="" loading="lazy">`:""}<span class="sn">${esc(c.naam??o.naam)}</span><b>${o.sterren}</b><small>${pct(o.procent)}, ${o.aanvallen}/${per} aanv.</small></div>`};
  return `<div class="rondes">${knoppen}</div><div class="ronderij">${oorlogen.map(w=>{const[a,b]=w.kanten,voor=w.status==="preparation",ua=voor?"":uitkomst(w,a,b),ub=voor?"":uitkomst(w,b,a),st=voor?"Voorbereiding":ua==="bezig"?"Nog niet beslist":ua==="g"?"Gelijkspel":w.status==="warEnded"?"Afgelopen":"Uitslag staat vast";
-  return `<article class="rondeoorlog ${a.tag===k.tag||b.tag===k.tag?"eigen":""}">${kant(a,ua,w.grootte)}<span class="rs-mid">${esc(st)}</span>${kant(b,ub,w.grootte)}</article>`}).join("")||'<p class="uitleg">Nog geen oorlogen bekend voor deze ronde.</p>'}</div>`}
+  return `<article class="rondeoorlog ${a.tag===k.tag||b.tag===k.tag?"eigen":""}">${kant(a,ua,w.grootte)}<span class="rs-mid">${esc(st)}</span>${kant(b,ub,w.grootte)}</article>`}).join("")||verwachtView(k,n,clan)}</div>`}
+function verwachtView(k,n,clan){const v=verwachteRonde(k,n),naam=t=>esc(clan[t]?.naam??t),rij=([a,b])=>`<article class="rondeoorlog ${a===k.tag||b===k.tag?"eigen":""}">${[a].map(t=>`<div class="rk">${clan[t]?.logo?`<img class="logo" src="${esc(clan[t].logo)}" width="30" height="30" alt="" loading="lazy">`:""}<span class="sn">${naam(t)}</span></div>`).join("")}<span class="rs-mid">Verwacht</span><div class="rk">${clan[b]?.logo?`<img class="logo" src="${esc(clan[b].logo)}" width="30" height="30" alt="" loading="lazy">`:""}<span class="sn">${naam(b)}</span></div></article>`;
+ if(!v)return '<p class="uitleg">De indeling van deze ronde is nog niet te bepalen.</p>';
+ const tekst=v.opties===1?"":`<p class="uitleg verwachtuitleg">Nog ${v.opties} indelingen mogelijk.${v.eigen.length>1?` ${esc(k.naam)} speelt tegen een van: ${v.eigen.map(naam).join(", ")}.`:""}</p>`;
+ return v.zeker.map(rij).join("")+tekst}
 function overzichtView(){const c=[...D.clans].filter(x=>x.cwl?.rondes||x.cwl?.stand?.length).sort((a,b)=>(a.nr||0)-(b.nr||0));if(!c.length)return"";
  const rond=[1,2,3,4,5,6,7];
  return `<section class="sectie"><h2>CWL-tussenstand</h2>${c.map(k=>{const[op,neer]=plekken(k.warLeague),stand=cwlTabel(k),n=stand.length;
