@@ -1,0 +1,25 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 - <<'P'
+          import json,urllib.request,urllib.error
+          def g(u):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan"})
+              try:
+                  x=urllib.request.urlopen(r,timeout=60);return x.status,json.load(x)
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read()[:200]
+              except Exception as e:
+                  return str(e)[:60],None
+          C="https://api.clashk.ing"
+          o=g(C+"/openapi.json")[1];d=o["paths"]["/v2/cwl/{tag}/ranking-history"]["get"];print("OP",d.get("summary"),[x.get("name") for x in d.get("parameters",[])])
+          for c in ["PYQ2RLCQ","2RGYGLVC0","2JYY0809P"]:
+              s,d=g(C+f"/v2/cwl/%23{c}/ranking-history");print("RH",c,s,json.dumps(d)[:800] if isinstance(d,(dict,list)) else d)
+              if s==200:
+                  i=d.get("items",d) if isinstance(d,dict) else d;print("N",len(i),json.dumps(i[-1])[:300] if i else "")
+          s,d=g(C+"/cwl/%23PYQ2RLCQ/2026-05");print("CW",s,list(d.keys())[:15] if isinstance(d,dict) else d,str(d.get("season") if isinstance(d,dict) else "")[:30],json.dumps(d.get("clan_rankings") if isinstance(d,dict) else None)[:300])
+          P
