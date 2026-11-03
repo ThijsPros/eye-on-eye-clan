@@ -628,7 +628,7 @@ def main():
 
     first_war = parse_time(wars[0]["start"]) if wars else None
     window_full = bool(first_war and first_war <= NOW - timedelta(days=CONFIG["venster_dagen"]))
-    summaries = [war_summary(w) for w in reversed(wars)][:60]
+    summaries = [war_summary(w) for w in reversed(wars)][:200]
 
     write_json(DATA / "history.json", history)
     write_json(DATA / "latest.json", {
