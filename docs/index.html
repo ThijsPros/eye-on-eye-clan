@@ -62,6 +62,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;line-height:1.05}
 .rondes .voor{background:#E58A1F;color:#2B1400}
 .rondes .win{background:#17804A;color:#fff}
 .rondes .ver{background:#C2332B;color:#fff}
+.rondes .open{background:#6B7488;color:#fff}
 .rondes button[aria-current]{box-shadow:0 0 0 2px var(--night-deep),0 0 0 4px #fff}
 .rondes button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .score{display:grid;grid-template-columns:1fr auto 1fr;gap:6px 10px;align-items:center;text-align:center;font-size:15px}
@@ -267,7 +268,7 @@ const waarde=(p,k)=>k==="moest"?(p.cw?.moest??0):k==="gem"?gem(p):k==="gemis"?(p
 
 const soortNaam=w=>w.soort==="cwl"?`CWL ronde ${w.ronde??"?"}`:"Clanoorlog";
 function oordeel(w){const a=w.clan.stars||0,b=w.tegenstander.stars||0;
- if(w.status==="warEnded"){const win=a>b||(a===b&&w.clan.destructionPercentage>w.tegenstander.destructionPercentage);return win?["win","Gewonnen"]:["ver","Verloren"]}
+ if(w.status==="warEnded"){const x=w.clan.destructionPercentage,y=w.tegenstander.destructionPercentage;if(a>b||(a===b&&x>y))return ["win","Gewonnen"];if(a<b||(a===b&&x<y))return ["ver","Verloren"];return ["open","Gelijkspel"]}
  if(w.maxZij==null)return null;
  if(w.totaal&&w.clan.aanvallen>=w.totaal&&w.tegenstander.aanvallen>=w.totaal){const x=w.clan.destructionPercentage,y=w.tegenstander.destructionPercentage;if(a>b||(a===b&&x>y))return ["win","Winst is binnen"];if(a<b||(a===b&&x<y))return ["ver","Niet meer te winnen"];return ["open","Gelijkspel"]}
  if(a>w.maxZij)return ["win","Winst is binnen"];
@@ -292,7 +293,7 @@ function ledenLijst(c,w){const per=w.perLid||1,leden=w.leden||[],nog=leden.filte
  return `<details class="open" data-lijst="${esc(c.tag)}"${dichteLijst.has(c.tag)?"":" open"}><summary>${tekst}</summary><ol class="leden">${leden.map((m,i)=>{const klaar=m.aanvallen.length>=per,rijen=[];for(let j=0;j<per;j++)rijen.push(sterRij(m.aanvallen[j]));
   return `<li><span class="rang ${w.status==="preparation"?"":klaar?"ja":"nee"}">${i+1}</span><span class="sn">${esc(m.naam)}</span><span class="ats">${rijen.join("")}</span></li>`}).join("")}</ol></details>`}
 function rondeKnoppen(c,rondes,keuze){let r="";for(let i=1;i<=7;i++){const w=rondes[i],o=w&&w.status==="warEnded"?oordeel(w)[0]:"",k=!w?"":w.status==="inWar"?"bezig":w.status==="preparation"?"voor":o;
- const uitleg=!w?"nog niet bekend":w.status==="inWar"?"bezig":w.status==="preparation"?"voorbereiding":w.status==="warEnded"?(o==="win"?"gewonnen":"verloren"):"einde niet gezien";
+ const uitleg=!w?"nog niet bekend":w.status==="inWar"?"bezig":w.status==="preparation"?"voorbereiding":w.status==="warEnded"?(o==="win"?"gewonnen":o==="ver"?"verloren":"gelijkspel"):"einde niet gezien";
  r+=`<button class="${k}" data-kclan="${esc(c.tag)}" data-ronde="${i}"${w?"":" disabled"} aria-label="Ronde ${i}, ${uitleg}" title="Ronde ${i}: ${uitleg}"${i===keuze?' aria-current="true"':""}>${i}</button>`}
  return `<div class="rondes">${r}</div>`}
 function kolom(c){const eigen=D.oorlogen.filter(w=>w.clan.tag===c.tag);let w,knoppen="";
@@ -443,15 +444,15 @@ async function opslaan(){opslagMelding="Opslaan…";render();try{const tekst=JSO
 
 function oorlogenView(){const w=D.oorlogen.filter(x=>x.status==="warEnded"||x.status==="onvolledig");
  if(!w.length)return '<section class="sectie"><h2>Uitslagen</h2><p class="uitleg">Nog geen afgelopen oorlogen opgeslagen. Lopende oorlogen staan bovenaan.</p></section>';
- return `<section class="sectie"><h2>Uitslagen</h2><div class="lijst">${w.map(x=>{const c=clanVan(x.clan.tag),a=x.clan.stars??0,b=x.tegenstander.stars??0,win=a>b||(a===b&&x.clan.destructionPercentage>x.tegenstander.destructionPercentage),heel=x.status==="warEnded";
+ return `<section class="sectie"><h2>Uitslagen</h2><div class="lijst">${w.map(x=>{const c=clanVan(x.clan.tag),a=x.clan.stars??0,b=x.tegenstander.stars??0,heel=x.status==="warEnded",o=heel?oordeel(x):null,kl=o?.[0]==="win"?"win":o?.[0]==="ver"?"ver":"";
   return `<article class="uitslag">${schild(c?.nr,32)}<div class="wie"><b>tegen ${esc(x.tegenstander.name)}</b><span>${x.soort==="cwl"?`CWL ronde ${x.ronde??"?"}`:"Clanoorlog"}, ${datum(iso(x.start))}</span></div>
-  <div class="sc ${heel?(win?"win":"ver"):""}">${a} – ${b}<small>${heel?(win?"Gewonnen":"Verloren"):"Einde niet gezien"}, ${x.gebruikt}/${x.totaal}</small></div></article>`}).join("")}</div></section>`}
+  <div class="sc ${kl}">${a} – ${b}<small>${o?o[1]:"Einde niet gezien"}, ${x.gebruikt}/${x.totaal}</small></div></article>`}).join("")}</div></section>`}
 
 function berichten(){const uit=[];
  D.oorlogen.filter(w=>w.status==="inWar").forEach(w=>{const namen=w.open.map(o=>`- ${o.naam}${o.over>1?` (${o.over} over)`:""}`).join("\n");
   uit.push([`Herinnering ${w.clan.name}`,`⚔️ ${w.clan.name} tegen ${w.tegenstander.name}\nStand: ${w.clan.stars} - ${w.tegenstander.stars}\nDe oorlog eindigt ${klok(tijd(w.einde))}.\n\n${namen?"Nog aanvallen:\n"+namen:"Iedereen heeft aangevallen. Top!"}`])});
  const w=D.oorlogen.find(x=>x.status==="warEnded");
- if(w){const t=w.clan.stars>w.tegenstander.stars?"Gewonnen! 🎉":w.clan.stars<w.tegenstander.stars?"Verloren.":"Gelijke sterren.";
+ if(w){const t={win:"Gewonnen! 🎉",ver:"Verloren.",open:"Gelijkspel."}[oordeel(w)[0]];
   uit.push([`Laatste uitslag ${w.clan.name}`,`🏁 ${w.clan.name} tegen ${w.tegenstander.name}\n${t}\nSterren: ${w.clan.stars} - ${w.tegenstander.stars}\nAanvallen gebruikt: ${w.gebruikt}/${w.totaal}${w.open.length?"\n\nNiet alles gebruikt:\n"+w.open.map(o=>`- ${o.naam}`).join("\n"):""}`])}
  const top=D.players.filter(p=>p.inClan&&p.d&&(p.d.h||p.d.p||p.d.e)).map(p=>[p,p.d.h+p.d.p+p.d.e]).sort((a,b)=>b[1]-a[1]).slice(0,5);
  if(top.length)uit.push(["Groeiers van de maand",`📈 Grootste groei deze maand\n${top.map(([p,g],i)=>`${i+1}. ${p.naam} (+${g})`).join("\n")}`]);
