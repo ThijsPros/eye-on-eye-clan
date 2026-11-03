@@ -93,7 +93,7 @@ def parse_time(value):
 def league_of(player):
     """Naam en volgnummer van de league. Volgnummer dient alleen om te sorteren."""
     tier = player.get("leagueTier") or player.get("league") or {}
-    name = tier.get("name") or "Onbekend"
+    name = (tier.get("name") or "Onbekend").replace(" League", "")
     match = re.search(r"(\d+)$", name)
     if match:
         return name, int(match.group(1))
@@ -367,7 +367,7 @@ def main():
         player["inClan"] = player.get("clanTag") in clan_tags
         player["d"] = (
             {"h": current[0] - before[0], "p": current[1] - before[1], "e": current[2] - before[2],
-             "l": current[3] - before[3] if len(before) > 3 else None}
+             "l": current[3] - before[3] if len(before) > 3 and current[3] and before[3] else None}
             if before else None
         )
         player["s"] = [series.get(m, [None] * 3)[:3] if m in series else None for m in labels]
