@@ -1,0 +1,31 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          python3 - <<'P'
+          import json,os,urllib.request,urllib.error,collections,datetime as dt
+          def g(u,h={}):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan",**h})
+              try:
+                  x=urllib.request.urlopen(r,timeout=60);return x.status,json.load(x)
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read()[:160]
+              except Exception as e:
+                  return str(e)[:60],None
+          K={"Authorization":"Bearer "+os.environ["COC_API_KEY"]}
+          B="https://cocproxy.royaleapi.dev/v1"
+          for t in "80YULR99P,QL9JCJ29G,QUYLU8C0,9J8Y822CG,G9UJ0LGU9,PP998PVG,PVUJCYV,2RGVVJGY9,8PLCQJ0RR,22RU8Y0Y0,LRYLCCY,8GJ908Q99,GCGRLGJ0R,GU9YQP0CV,GCL0YJUCV".split(","):
+              s,p=g(B+f"/players/%23{t}",K);s,d=g(B+f"/players/%23{t}/battlelog",K);i=d["items"] if s==200 else []
+              ts=[x.get("battleTimestamp") or 0 for x in i]
+              print("P",p["name"][:12],p["leagueTier"]["name"],p.get("currentLeagueGroupTag"),p.get("currentLeagueSeasonId"),p.get("previousLeagueGroupTag"),len(i),collections.Counter((x["battleType"],x["attack"]) for x in i).most_common(6),str(i[0].get("battleTime"))[:15] if i else "",str(i[-1].get("battleTime"))[:15] if i else "",ts[:1])
+          t="80YULR99P,QL9JCJ29G,QUYLU8C0,9J8Y822CG,G9UJ0LGU9,PP998PVG,PVUJCYV,2RGVVJGY9,8PLCQJ0RR,22RU8Y0Y0,LRYLCCY,8GJ908Q99,GCGRLGJ0R,GU9YQP0CV,GCL0YJUCV".split(",")[0];
+          s,p=g(B+f"/players/%23{t}",K);sid=p.get("previousLeagueSeasonId")
+          t2="80YULR99P,QL9JCJ29G,QUYLU8C0,9J8Y822CG,G9UJ0LGU9,PP998PVG,PVUJCYV,2RGVVJGY9,8PLCQJ0RR,22RU8Y0Y0,LRYLCCY,8GJ908Q99,GCGRLGJ0R,GU9YQP0CV,GCL0YJUCV".split(",")[6];s,p2=g(B+f"/players/%23{t2}",K);sid2=p2.get("currentLeagueSeasonId");cg=p2.get("currentLeagueGroupTag");print("Q",p2["name"],sid2,cg)
+          for u in [f"/v2/player/%23{t2}/ranked/{sid2}/group",f"/v2/player/%23{t2}/ranked/{sid2}/battlelog",f"/v2/player/%23{t2}/ranked/{p2.get('previousLeagueSeasonId')}/group",f"/v2/player/%23{t2}/ranked/{p2.get('previousLeagueSeasonId')}/battlelog",f"/v2/player/%23{t2}/league/history",f"/v2/player/%23{t2}/battlelog/history"]:
+              s,d=g("https://api.clashk.ing"+u);print("CK",u,s,json.dumps(d)[:900] if isinstance(d,(dict,list)) else d)
+          P
