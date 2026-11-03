@@ -566,7 +566,7 @@ function clanBericht(c){const eigen=D.oorlogen.filter(w=>w.clan.tag===c.tag),bez
  else{const o=oordeel(w);r.push(`⭐ *${w.clan.stars??0} - ${w.tegenstander.stars??0}* sterren`,`💥 ${pct(w.clan.destructionPercentage)} - ${pct(w.tegenstander.destructionPercentage)}`,`🗡️ ${w.clan.aanvallen??w.gebruikt}/${w.totaal} aanvallen`);
   if(w.status==="inWar"){r.push(`⏳ Nog ${resttekst(tijd(w.einde))}, eindigt ${tijd(w.einde).toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})}`);if(o&&o[0]!=="open")r.push(`🏆 ${o[1]}`);r.push(w.open.length?`❗ Nog aanvallen: ${w.open.map(x=>x.naam).join(", ")}`:"✅ Iedereen heeft aangevallen")}
   else{r.push(`🏁 ${o?o[1]:"Afgelopen"}`);if(w.open.length)r.push(`❌ Niet aangevallen: ${w.open.map(x=>x.naam).join(", ")}`)}}
- if(w===bezig&&voor)r.push(`➡️ Hierna ${soortNaam(voor)} tegen ${voor.tegenstander.name}`);return r.join("\n")}
+ return r.join("\n")}
 function berichten(){const uit=[],delen=[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(clanBericht).filter(Boolean);
  if(delen.length)uit.push(["Oorlogsupdate",`⚔️ *EYE ON EYE OORLOGSUPDATE* ⚔️\n_${klok(new Date)}_\n\n${delen.join("\n\n")}\n\n📊 https://thijspros.github.io/eye-on-eye-clan/`]);
  const top=D.players.filter(p=>p.inClan&&p.d&&(p.d.h||p.d.p||p.d.e)).map(p=>[p,p.d.h+p.d.p+p.d.e]).sort((a,b)=>b[1]-a[1]).slice(0,5);
