@@ -1,0 +1,24 @@
+name: Bronnen onderzoeken
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'P'
+          import json,urllib.request,time
+          d=json.load(open('docs/data/latest.json'))
+          B=json.load(open('docs/data/live.json'))['url']
+          ws=[w for w in d['oorlogen'] if w['status'] in('inWar','preparation')]
+          for w in ws:
+              u=B+'/oorlog/'+w['id'].split('-')[-1] if w['soort']=='cwl' else B+'/clan/'+w['clan']['tag'][1:]
+              try:
+                  r=urllib.request.urlopen(urllib.request.Request(u,headers={'Origin':'https://thijspros.github.io','User-Agent':'test'}),timeout=30);j=json.load(r)
+                  print('LIVE',w['clan']['name'],w['ronde'],r.status,r.headers.get('access-control-allow-origin'),j.get('state'),j['clan'].get('stars'),j['opponent'].get('stars'),j['clan'].get('attacks'),j['opponent'].get('attacks'),j.get('endTime')==w['einde'])
+              except Exception as e:
+                  print('FOUT',u,e,str(getattr(e,'read',lambda:b'')()[:150]))
+          P
