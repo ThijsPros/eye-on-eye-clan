@@ -1,0 +1,26 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          python3 - <<'P'
+          import json,os,urllib.request,urllib.error
+          def g(u,h={}):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan",**h})
+              try:
+                  x=urllib.request.urlopen(r,timeout=60);return x.status,json.load(x)
+              except urllib.error.HTTPError as e:
+                  return e.code,None
+          K={"Authorization":"Bearer "+os.environ["COC_API_KEY"]}
+          B="https://cocproxy.royaleapi.dev/v1/clans/%23PYQ2RLCQ/capitalraidseasons"
+          for q in ["?limit=2","?limit=5","?limit=20"]:
+              s,d=g(B+q,K);print("API",q,s,[(i["startTime"][:8],len(i.get("members",[]))) for i in d["items"]][:6],list(d["items"][1].keys()) if len(d["items"])>1 else "")
+          s,d=g(B+"?limit=1",K);c=d["paging"]["cursors"].get("after");s,e=g(B+"?limit=1&after="+c,K);print("NEXT",s,[(i["startTime"][:8],len(i.get("members",[]))) for i in e["items"]])
+          o=g("https://api.clashk.ing/openapi.json")[1];print("PATHS",[p for p in o["paths"] if any(w in p.lower() for w in("raid","capital"))])
+          for u in ["https://api.clashk.ing/v2/clan/%23PYQ2RLCQ/capital-raids?limit=3","https://api.clashk.ing/clan/%23PYQ2RLCQ/raids?limit=3"]:
+              s,d=g(u);print("CK",u,s,str(d)[:300])
+          P
