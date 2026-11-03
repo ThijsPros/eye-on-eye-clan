@@ -8,14 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS -m 30 https://api.clashk.ing/openapi.json -o o.json -w "openapi %{http_code} %{size_download}\n"
+          curl -sS -m 30 https://api.clashk.ing/openapi.json -o o.json
           python3 - <<'P'
-          import json
+          import json,urllib.request,urllib.parse,time
           d=json.load(open('o.json'))
-          print(d.get('info',{}).get('title'),d.get('info',{}).get('version'),len(d['paths']))
-          for p,v in d['paths'].items():
-              l=p.lower()
-              if any(k in l for k in ('war','hit','join','leave','clan-history','clanhistory','history','stats','activity')):
-                  for m,o in v.items():
-                      if m in('get','post'): print(m.upper(),p,'|',(o.get('summary') or '')[:70],'| auth' if o.get('security') else '')
+          for p in ['/v2/player/{tag}/war/attacks','/v2/player/{playerTag}/war/stats','/v2/player/{playerTag}/join-leave/totals','/player/{player_tag}/join-leave','/player/{player_tag}/warhits','/clan/{clan_tag}/join-leave','/v2/clan/{clanTag}/wars']:
+              o=d['paths'][p]['get']
+              print('PATH',p,'|',(o.get('description') or '')[:300].replace('\n',' '))
+              print(' PARAMS',[(x.get('name'),x.get('in'),x.get('schema',{}).get('default')) for x in o.get('parameters',[])])
+          t=urllib.parse.quote('#QUYLU8C0',safe='');c=urllib.parse.quote('#PYQ2RLCQ',safe='')
+          for u in [f'/v2/player/{t}/war/attacks?limit=2',f'/v2/player/{t}/war/stats',f'/v2/player/{t}/join-leave/totals',f'/player/{t}/join-leave?limit=3',f'/player/{t}/warhits?limit=2',f'/clan/{c}/join-leave?limit=2',f'/v2/clan/{c}/wars?limit=1']:
+              try:
+                  r=urllib.request.urlopen(urllib.request.Request('https://api.clashk.ing'+u,headers={'User-Agent':'eye-on-eye'}),timeout=30);b=r.read().decode()
+                  print('OK',u,len(b),dict(list(r.headers.items())).get('Retry-After'),b[:900].replace('\n',' '))
+              except Exception as e:
+                  print('ERR',u,e,getattr(e,'read',lambda:b'')()[:200])
+              time.sleep(1)
           P
