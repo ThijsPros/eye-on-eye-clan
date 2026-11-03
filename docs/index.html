@@ -541,7 +541,7 @@ function poolStats(lijst){const velden={gem:p=>p.cw?.gem??null,cwl:p=>laatsteCwl
   let score=.3*(n.gem??0)+.3*(n.cwl??0)+.15*(n.helden??0)+.1*(n.dieren??0)+.15*(n.equip??0);
   const doorzetter=c&&c.sterren>=21&&clanVan(c.clan)?.nr===3;if(doorzetter)score+=.15;if(K(p).keuze==="Zekerheid")score+=.1;if(K(p).keuze==="Twijfel")score-=.1;
   uit.set(p.tag,{...n,score:Math.round(Math.min(score,1)*100),doorzetter})});return uit}
-function advies(){const pool13=D.players.filter(p=>[1,3].includes(clanNr(p))&&K(p).keuze!=="Nee"),pool2=D.players.filter(p=>clanNr(p)===2&&K(p).keuze!=="Nee"),a=poolStats(pool13),b=poolStats(pool2),uit={},srt=(l,m)=>[...l].sort((x,y)=>m.get(y.tag).score-m.get(x.tag).score);
+function advies(){const relevant=p=>(p.th||0)>=15&&K(p).keuze!=="Nee",pool13=D.players.filter(p=>[1,3].includes(clanNr(p))&&relevant(p)),pool2=D.players.filter(p=>clanNr(p)===2&&relevant(p)),a=poolStats(pool13),b=poolStats(pool2),uit={},srt=(l,m)=>[...l].sort((x,y)=>m.get(y.tag).score-m.get(x.tag).score);
  const gezien=new Set;let i=1;const rest=[];srt(pool13,a).forEach(p=>{if(i<=15&&!gezien.has(eigenaar(p))){uit[pid(p)]=i++;gezien.add(eigenaar(p))}else rest.push(p)});
  rest.slice(0,15).forEach((p,x)=>uit[pid(p)]=16+x);srt(pool2,b).slice(0,15).forEach((p,x)=>uit[pid(p)]=101+x);return uit}
 function letOp(){const ing=D.players.filter(p=>K(p).plek!=null),m=[],n=l=>l.map(p=>esc(p.naam)).join(", ");
@@ -551,7 +551,7 @@ function letOp(){const ing=D.players.filter(p=>K(p).plek!=null),m=[],n=l=>l.map(
  const f=ing.filter(p=>(K(p).plek>100)!==(clanNr(p)===2));if(f.length)m.push(`Ingedeeld buiten de eigen pool: ${n(f)}`);
  return m.length?`<div class="letop"><h3>Let op</h3><ul>${m.map(x=>`<li>${x}</li>`).join("")}</ul></div>`:""}
 const warm=t=>t==null?"":`style="background:hsl(${Math.round(t*120)} 62% 30%)"`;
-function bakRijen(){const pool=D.players.filter(p=>bakPool==="2"?clanNr(p)===2:[1,3].includes(clanNr(p))),st=poolStats(pool),adv=advies();
+function bakRijen(){const pool=D.players.filter(p=>(p.th||0)>=15&&(bakPool==="2"?clanNr(p)===2:[1,3].includes(clanNr(p)))),st=poolStats(pool),adv=advies();
  const zicht=pool.filter(p=>(!bakZoek||p.naam.toLowerCase().includes(bakZoek))&&(!bakVrij||K(p).plek==null));
  const w=(p,k)=>k==="score"?st.get(p.tag).score:k==="gem"?(p.cw?.gem??-1):k==="cwl"?(laatsteCwl(p)?.sterren??-1):p[k];
  zicht.sort((a,b)=>(w(b,bakSort)??0)-(w(a,bakSort)??0));
@@ -564,7 +564,7 @@ function opstellingView(){const bezet={};D.players.forEach(p=>{if(K(p).plek!=nul
  <div id="sleutelform" hidden class="sleutel"><label for="sleutel">GitHub-sleutel met schrijfrecht op de clan-repository</label><div class="tools"><input id="sleutel" type="password" autocomplete="off"><button class="knop" data-actie="sleutel">Opslaan</button></div><p class="uitleg">De sleutel blijft in deze browser en gaat alleen naar GitHub.</p></div>
  ${letOp()}<div class="planner"><div class="bak"><div class="tools"><div class="chips"><button class="chip" data-bak="13" aria-pressed="${bakPool==="13"}">Clan I en III</button><button class="chip" data-bak="2" aria-pressed="${bakPool==="2"}">Clan II</button><button class="chip" data-bakvrij aria-pressed="${bakVrij}">Alleen niet ingedeeld</button></div><input id="bakzoek" type="search" placeholder="Zoek speler" aria-label="Zoek speler" value="${esc(bakZoek)}"></div>
  <div class="bakbox" id="bakbox" data-doel="0"><table><thead><tr><th>Speler</th>${kolom("th","TH","n opt")}${kolom("helden","Held","n opt")}${kolom("dieren","Dier","n opt")}${kolom("equip","Equip","n opt")}${kolom("gem","Gem")}${kolom("cwl","CWL ★")}${kolom("score","Score")}<th class="opt">Advies</th><th class="opt">Keuze</th></tr></thead><tbody id="bakrijen">${bakRijen()}</tbody></table></div>
- <p class="uitleg">Sleep een speler naar een plek, of tik op een naam en daarna op een plek. Sleep terug naar de lijst om iemand uit de opstelling te halen. Score: 30% gemiddelde, 30% sterren vorige CWL, 15% helden, 15% equipment en 10% dieren, plus extra voor 21★ in clan III.</p></div>
+ <p class="uitleg">Accounts onder TH15 staan niet in de lijst. Sleep een speler naar een plek, of tik op een naam en daarna op een plek. Sleep terug naar de lijst om iemand uit de opstelling te halen. Score: 30% gemiddelde, 30% sterren vorige CWL, 15% helden, 15% equipment en 10% dieren, plus extra voor 21★ in clan III.</p></div>
  <div class="vakken">${VAKKEN.map(v=>vakHtml(v,bezet)).join("")}</div></div></section>`}
 function verplaats(id,doel){const p=D.players.find(x=>pid(x)===id);if(!p)return;const oud=K(p).plek??null;if(doel===oud)return;const ander=doel?D.players.find(x=>K(x).plek===doel):null;
  if(ander)zetKeuze(pid(ander),"plek",oud);zetKeuze(id,"plek",doel||null);gekozen=null;concept();render()}
