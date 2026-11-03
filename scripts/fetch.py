@@ -269,45 +269,26 @@ def war_summary(war):
     }
 
 
-def api_check(players_by_tag, baseline, clans, raw_sample):
-    """Vergelijkt de API-optelling met de laatste ClashSpot-export."""
-    fields = {"helden": [], "dieren": [], "equip": []}
-    for old in baseline["players"]:
-        new = players_by_tag.get(old["tag"])
-        if new:
-            for field, differences in fields.items():
-                differences.append((abs(new[field] - old[field]), old["naam"], old[field], new[field]))
-    summary = {}
-    for field, differences in fields.items():
-        differences.sort(key=lambda x: -x[0])
-        summary[field] = {
-            "vergeleken": len(differences),
-            "gelijk": sum(d[0] == 0 for d in differences),
-            "grootste": [{"naam": d[1], "clashspot": d[2], "api": d[3]} for d in differences[:5] if d[0]],
-        }
+def api_check(clans, raw_sample):
+    """Korte controle: welke clans en spelervelden levert de API?"""
     return {
         "getest": NOW.isoformat(timespec="seconds"),
         "bron": BASE,
         "clans": [{"tag": c["tag"], "naam": c["name"], "leden": c.get("members")} for c in clans],
         "spelervelden": sorted(k for k in raw_sample if k in ("league", "leagueTier", "heroes", "heroEquipment", "troops", "role", "clan")),
-        "vergelijking": summary,
     }
 
 
 def main():
     if not os.environ.get("COC_API_KEY"):
         sys.exit("COC_API_KEY ontbreekt")
-    baseline = read_json(DATA / "baseline.json", None)
-    history = read_json(DATA / "history.json", None)
-    if not baseline or not history:
-        sys.exit("baseline.json of history.json ontbreekt")
+    history = read_json(DATA / "history.json", {"maanden": [], "spelers": {}})
 
     clans = load_clans()
     if not clans:
         sys.exit("Geen clans gevonden. Controleer de tags in config.json.")
 
     tags = [m["tag"] for clan in clans for m in clan.get("memberList", [])]
-    tags += [p["tag"] for p in baseline["players"]]
     tags += list(history["spelers"])  # Iedereen die ooit is gezien, blijft gevolgd.
     tags = list(dict.fromkeys(tags))
 
@@ -351,7 +332,6 @@ def main():
 
     clan_tags = {c["tag"] for c in clans}
     moves = history.setdefault("clans", {})
-    baseline_by_tag = {p["tag"]: p for p in baseline["players"]}
     output = []
     for tag, player in players.items():
         series = history["spelers"].setdefault(tag, {})
@@ -378,8 +358,6 @@ def main():
         )
         player["s"] = [series.get(m, [None] * 3)[:3] if m in series else None for m in labels]
         player["cw"] = stats.get(tag)
-        old = baseline_by_tag.get(tag)
-        player["cs"] = {k: old.get(k) for k in ("aanv", "gem", "drie", "gemis", "laatste")} if old else None
         output.append(player)
 
     first_war = parse_time(wars[0]["start"]) if wars else None
@@ -392,14 +370,13 @@ def main():
         "maanden": labels,
         "vensterDagen": CONFIG["venster_dagen"],
         "vensterVol": window_full,
-        "exportLabel": baseline["label"],
         "eersteOorlog": wars[0]["start"][:8] if wars else None,
         "grensAanvallen": CONFIG["grens_aanvallen"],
         "clans": clan_status,
         "players": output,
         "oorlogen": summaries,
     })
-    write_json(DATA / "api_check.json", api_check(players, baseline, clans, raw_sample))
+    write_json(DATA / "api_check.json", api_check(clans, raw_sample))
     print(f"{len(clans)} clans, {len(output)} spelers, {len(wars)} oorlogen bewaard, {len(failed)} mislukt")
 
 

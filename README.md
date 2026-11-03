@@ -8,8 +8,7 @@ openbare website via GitHub Pages.
 1. Zet in GitHub onder Settings > Pages de bron op `Deploy from a branch`,
    branch `main`, map `/docs`.
 2. Start onder Actions de workflow `Clandata bijwerken` met `Run workflow`.
-3. Controleer `docs/data/api_check.json`. Daarin staan de gevonden clans en de
-   vergelijking met de ClashSpot-export.
+3. Controleer `docs/data/api_check.json`. Daarin staan de gevonden clans.
 
 Elke speler die ooit in een van de clans is gezien, blijft bewaard, ook na een
 overstap of vertrek.
@@ -29,9 +28,16 @@ In `config.json`:
 
 - `scripts/fetch.py`: het ophaalscript.
 - `docs/index.html`: de website.
-- `docs/data/baseline.json`: ClashSpot-export van november 2026.
-- `docs/data/history.json`: maandstanden per speler.
+- `docs/data/history.json`: maandstanden per speler, voor de groei per maand.
+- `docs/data/leiding.json`: opstelling en leiding-keuzes, bewerkbaar op de site.
 - `docs/data/wars/`: elke opgeslagen oorlog.
 - `docs/data/latest.json`: de data voor de website, gemaakt door het script.
 
-Leiding-keuzes staan hier bewust niet in, omdat repository en website openbaar zijn.
+Alle spelerdata komt uit de API. Alleen de opstelling en leiding-keuzes worden
+met de hand bepaald.
+
+## Opstelling bewerken
+
+Maak op GitHub een fine-grained token met alleen toegang tot deze repository en
+`Contents: Read and write`. Vul die op de site in bij Opstelling > Bewerken. De
+token blijft in je eigen browser en gaat alleen naar GitHub.
