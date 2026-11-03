@@ -262,6 +262,13 @@ def backfill(clans, history):
         if wars is None:
             complete = False
             continue
+        # De oudere route gaat verder terug, maar dient alleen voor eerste datums.
+        for war in clashking(f"/war/{tag_url(tag)}/previous?limit=2000") or []:
+            if war.get("startTime"):
+                side = war["clan"] if war["clan"].get("tag") == tag else war["opponent"]
+                date = to_date(war["startTime"])
+                for member in side.get("members", []):
+                    first[member["tag"]] = min(first.get(member["tag"], date), date)
         wars = [w for w in wars if w.get("state") == "warEnded" and w.get("startTime")]
         rounds = {}
         for war in sorted((w for w in wars if w.get("tag")), key=lambda w: w["startTime"]):
@@ -469,6 +476,9 @@ def main():
         player = dict(player)
         player["inClan"] = player.get("clanTag") in clan_tags
         player["sinds"] = history.setdefault("eerst", {}).setdefault(tag, NOW.strftime("%Y-%m-%d"))
+        if tag in CONFIG["bij_ons_sinds"]:
+            player["sinds"] = CONFIG["bij_ons_sinds"][tag]
+            player["sindsVast"] = True
         move = moves.get(tag)
         if not player.get("verouderd"):
             if not move or move["tag"] != player.get("clanTag"):
@@ -495,6 +505,7 @@ def main():
     write_json(DATA / "history.json", history)
     write_json(DATA / "latest.json", {
         "bijgewerkt": NOW.isoformat(timespec="seconds"),
+        "sindsBegin": min(history["eerst"].values()),
         "maanden": labels,
         "vensterDagen": CONFIG["venster_dagen"],
         "vensterVol": window_full,

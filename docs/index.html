@@ -317,13 +317,16 @@ function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="f
 
 const overzichtView=()=>"";
 
+// Binnen 30 dagen na de eerste bekende oorlog is de echte datum onbekend: die speler zat er al.
+function sindsTekst(p){if(!p.sinds)return"–";if(p.sindsVast)return /^\d{4}$/.test(p.sinds)?p.sinds:datum(p.sinds);
+ const b=new Date(D.sindsBegin);if((new Date(p.sinds)-b)/864e5<=30)return `Vóór ${MND[b.getUTCMonth()]} ${b.getUTCFullYear()}`;return datum(p.sinds)}
 function delta(v){return v==null?'<span class="d">–</span>':v===0?'<span class="d">±0</span>':`<span class="d ${v>0?"up":"down"}">${v>0?"+":""}${v}</span>`}
 function spark(p,i,label){const pts=p.s.map((x,j)=>x?[j,x[i]]:null).filter(q=>q&&q[1]!=null);if(pts.length<2)return"";
  const vs=pts.map(q=>q[1]),a=Math.min(...vs),b=Math.max(...vs),n=p.s.length-1,X=j=>3+j*134/n,Y=v=>34-(v-a)/(b-a||1)*30,l=pts[pts.length-1];
  return `<div class="spark"><span>${label}: <b>${vs[0]} → ${l[1]}</b></span><svg viewBox="0 0 140 38" role="img" aria-label="${label} van ${vs[0]} naar ${l[1]}"><polyline points="${pts.map(q=>X(q[0]).toFixed(1)+","+Y(q[1]).toFixed(1)).join(" ")}"/><circle cx="${X(l[0]).toFixed(1)}" cy="${Y(l[1]).toFixed(1)}" r="2.6"/></svg></div>`}
 function detail(p,cols){const f=(k,v)=>`<div class="feit"><b>${esc(v??"–")}</b>${k}</div>`,c=p.cw||{};
  return `<tr class="detail"><td colspan="${cols}"><div class="dgrid">${spark(p,0,"Helden")}${spark(p,1,"Dieren")}${spark(p,2,"Equipment")}
- ${f("Clan",p.inClan?p.clan:(p.clan?p.clan+" (buiten onze clans)":"Geen clan"))}${p.vorigeClan?f("Vorige clan",`${p.vorigeClan} (tot ${datum(p.overstap)})`):""}${f("TH",p.th)}${f("Helden",p.helden)}${f("Dieren",p.dieren)}${f("Equipment",p.equip)}${f("Bij ons sinds",p.sinds?datum(p.sinds):null)}${f("Moest doen",c.moest??0)}${f("Gedaan",c.aanv??0)}${f("Niet gedaan",c.gemis??0)}${f("3 sterren",c.drieProcent!=null?Math.round(c.drieProcent)+"%":null)}${f("Laatste oorlog",c.laatste?datum(c.laatste):null)}${f("Rol",p.rol)}${f("Tag",p.tag)}</div></td></tr>`}
+ ${f("Clan",p.inClan?p.clan:(p.clan?p.clan+" (buiten onze clans)":"Geen clan"))}${p.vorigeClan?f("Vorige clan",`${p.vorigeClan} (tot ${datum(p.overstap)})`):""}${f("TH",p.th)}${f("Helden",p.helden)}${f("Dieren",p.dieren)}${f("Equipment",p.equip)}${f("Bij ons sinds",sindsTekst(p))}${f("Moest doen",c.moest??0)}${f("Gedaan",c.aanv??0)}${f("Niet gedaan",c.gemis??0)}${f("3 sterren",c.drieProcent!=null?Math.round(c.drieProcent)+"%":null)}${f("Laatste oorlog",c.laatste?datum(c.laatste):null)}${f("Rol",p.rol)}${f("Tag",p.tag)}</div></td></tr>`}
 function zichtbaar(){const l=D.players.filter(p=>{
  if(zoek&&!p.naam.toLowerCase().includes(zoek))return false;
  if(clanFilter==="uit")return !p.inClan;if(clanFilter&&p.clanTag!==clanFilter)return false;
@@ -332,12 +335,12 @@ function zichtbaar(){const l=D.players.filter(p=>{
  return [...l].sort((a,b)=>{const x=waarde(a,sort.k),y=waarde(b,sort.k);if(e(x)&&e(y))return 0;if(e(x))return 1;if(e(y))return -1;return (typeof x==="string"?x.localeCompare(y,"nl"):x-y)*sort.dir})}
 function rijen(){return zichtbaar().map(p=>{const d=p.d||{},m=p.cw?.moest??0,mis=p.cw?.gemis??0,i=encodeURIComponent(p.tag),c=p.inClan?clanVan(p.clanTag):null;
  return `<tr><td><div class="speler">${schild(c?.nr,20)}<button class="naam" data-open="${i}" aria-expanded="${open.has(p.tag)}">${esc(p.naam)}</button></div></td>
- <td class="opt">${p.sinds?datum(p.sinds):"–"}</td><td class="n opt">${p.th??"–"}</td><td>${esc(p.league)}${d.l?delta(d.l):""}</td>
+ <td class="opt">${sindsTekst(p)}</td><td class="n opt">${p.th??"–"}</td><td>${esc(p.league)}${d.l?delta(d.l):""}</td>
  <td class="n opt">${p.helden}${delta(d.h)}</td><td class="n opt">${p.dieren}${delta(d.p)}</td><td class="n opt">${p.equip}${delta(d.e)}</td>
  <td class="n"><span class="tal ${laag(p)?"bad":""}">${m}</span></td><td class="n"><span class="${mis?"tal bad":""}">${mis}</span></td><td class="n ster">${gem(p)!=null?gem(p).toFixed(2):"–"}</td></tr>${open.has(p.tag)?detail(p,COLS.length):""}`}).join("")}
 function kop(){return COLS.map(([k,t,n,o,kort])=>`<th class="${n?"n ":""}${o?"opt":""}" aria-sort="${sort.k===k?(sort.dir>0?"ascending":"descending"):"none"}"><button data-k="${k}">${kort?`<span class="lang">${t}</span><span class="kort">${kort}</span>`:t}</button></th>`).join("")}
 function spelersView(){return `<section class="sectie"><h2>Alle leden</h2>
- <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Rood bij Moest doen is minder dan ${D.grensAanvallen} aanvallen. ${D.maanden.length<2?"Groei per maand zie je vanaf volgende maand.":"Groen en rood onder een getal is de groei sinds vorige maand."} Bij ons sinds is de vroegst bekende datum in een van onze clans. Tik op een naam voor meer.</p>
+ <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Rood bij Moest doen is minder dan ${D.grensAanvallen} aanvallen. ${D.maanden.length<2?"Groei per maand zie je vanaf volgende maand.":"Groen en rood onder een getal is de groei sinds vorige maand."} Bij ons sinds is de vroegst bekende datum in een van onze clans; de geschiedenis begint in ${MND[new Date(D.sindsBegin).getUTCMonth()]} ${new Date(D.sindsBegin).getUTCFullYear()}. Tik op een naam voor meer.</p>
  <div class="tools"><input id="zoek" type="search" placeholder="Zoek lid" aria-label="Zoek lid" value="${esc(zoek)}">
  <select id="clanf" aria-label="Filter op clan"><option value="">Alle clans</option>${D.clans.map(c=>`<option value="${esc(c.tag)}"${clanFilter===c.tag?" selected":""}>${esc(c.naam)}</option>`).join("")}<option value="uit"${clanFilter==="uit"?" selected":""}>Buiten onze clans</option></select>
  <select id="filter" aria-label="Filter spelers"><option value="">Alle leden</option><option value="laag"${filter==="laag"?" selected":""}>Onder ${D.grensAanvallen} aanvallen</option><option value="gemist"${filter==="gemist"?" selected":""}>Met gemiste aanvallen</option></select>

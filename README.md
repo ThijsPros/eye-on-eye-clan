@@ -35,6 +35,7 @@ In `config.json`:
 
 - `clans`: de vier clans in vaste volgorde, met hun rol op de site.
 - `venster_dagen`: periode voor aanvallen en gemiddelde.
+- `bij_ons_sinds`: vaste startdatums per speler-tag, bijvoorbeeld `{"#QUYLU8C0": "2014"}`.
 - `grens_aanvallen`: onder dit aantal wordt een speler rood.
 
 ## Bestanden
