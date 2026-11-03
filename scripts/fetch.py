@@ -135,6 +135,26 @@ def load_clans():
     return clans
 
 
+def side_info(side):
+    info = {k: side.get(k) for k in ("tag", "name", "stars", "destructionPercentage")}
+    info["aanvallen"] = side.get("attacks", sum(len(m.get("attacks", [])) for m in side.get("members", [])))
+    info["logo"] = (side.get("badgeUrls") or {}).get("medium")
+    return info
+
+
+def max_stars(stars, attacks_left, attacks, size):
+    """Hoogst haalbare sterren: elke resterende aanval pakt de grootste winst.
+
+    Per basis telt alleen de beste aanval, dus een basis met 2 sterren levert
+    nog maar 1 ster op. Dit is een bovengrens.
+    """
+    best = {}
+    for attack in attacks:
+        best[attack["doel"]] = max(best.get(attack["doel"], 0), attack["sterren"])
+    open_stars = [3 - value for value in best.values()] + [3] * max(0, size - len(best))
+    return stars + sum(sorted(open_stars, reverse=True)[:attacks_left])
+
+
 def normalize_war(raw, war_id, kind, clan_tag, season=None):
     side, opponent = raw["clan"], raw["opponent"]
     if side.get("tag") != clan_tag:
@@ -161,8 +181,12 @@ def normalize_war(raw, war_id, kind, clan_tag, season=None):
         "aanvallenPerLid": raw.get("attacksPerMember", 1),
         "start": raw.get("startTime"),
         "einde": raw.get("endTime"),
-        "clan": {k: side.get(k) for k in ("tag", "name", "stars", "destructionPercentage")},
-        "tegenstander": {k: opponent.get(k) for k in ("tag", "name", "stars", "destructionPercentage")},
+        "clan": side_info(side),
+        "tegenstander": side_info(opponent),
+        "tegenAanvallen": [
+            {"sterren": a["stars"], "doel": a["defenderTag"]}
+            for m in opponent.get("members", []) for a in m.get("attacks", [])
+        ],
         "leden": members,
     }
 
@@ -250,7 +274,18 @@ def own_stats(wars):
 def war_summary(war):
     members = war["leden"]
     per_member = war["aanvallenPerLid"]
+    size = war.get("grootte") or len(members)
+    our_attacks = [{"sterren": a["sterren"], "doel": a["doel"]} for m in members for a in m["aanvallen"]]
+    ours, theirs = war["clan"], war["tegenstander"]
+    limits = {}
+    if "tegenAanvallen" in war:
+        total = size * per_member
+        limits = {
+            "maxOns": max_stars(ours["stars"] or 0, max(0, total - len(our_attacks)), our_attacks, size),
+            "maxZij": max_stars(theirs["stars"] or 0, max(0, total - len(war["tegenAanvallen"])), war["tegenAanvallen"], size),
+        }
     return {
+        **limits,
         "id": war["id"],
         "soort": war["soort"],
         "ronde": war.get("ronde"),
@@ -318,7 +353,7 @@ def main():
         clan_status.append({
             "tag": wars_tag, "nr": clan["nr"], "rol": clan["rol"], "naam": clan["name"], "niveau": clan.get("clanLevel"),
             "leden": clan.get("members"), "warLeague": (clan.get("warLeague") or {}).get("name"),
-            "winst": clan.get("warWins"), "serie": clan.get("warWinStreak"), **status,
+            "logo": (clan.get("badgeUrls") or {}).get("medium"), "winst": clan.get("warWins"), "serie": clan.get("warWinStreak"), **status,
         })
 
     wars = load_wars()

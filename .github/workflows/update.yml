@@ -2,7 +2,7 @@ name: Clandata bijwerken
 
 on:
   schedule:
-    - cron: "23 */4 * * *"
+    - cron: "23 * * * *"
   workflow_dispatch:
 
 permissions:
