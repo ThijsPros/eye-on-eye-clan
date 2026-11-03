@@ -1,4 +1,4 @@
-# Eye on Eye
+# Eye on Eye Clan
 
 Haalt elk uur de clandata op uit de Clash of Clans API en toont die op een
 openbare website via GitHub Pages.
