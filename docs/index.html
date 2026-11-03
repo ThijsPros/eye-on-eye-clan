@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Eye on Eye</title>
+<title>Eye on Eye Clan</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self' https://api.github.com; img-src data: https://api-assets.clashofclans.com; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#12337A">
 <link rel="preload" href="fonts/lilita-one-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -214,7 +214,7 @@ footer{padding-block:0 28px;color:var(--muted);font-size:13px}
 <header class="wall">
  <div class="inner">
   <div class="top">
-   <div class="brand"><svg class="shield" width="30" height="34" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1 38 7v16c0 11-8 18-18 22C10 41 2 34 2 23V7z" fill="#F2B632"/><circle cx="20" cy="22" r="9" fill="#12337A"/><circle cx="20" cy="22" r="4" fill="#fff"/></svg><h1>Eye on Eye</h1></div>
+   <div class="brand"><svg id="merklogo" class="shield" width="30" height="34" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1 38 7v16c0 11-8 18-18 22C10 41 2 34 2 23V7z" fill="#F2B632"/><circle cx="20" cy="22" r="9" fill="#12337A"/><circle cx="20" cy="22" r="4" fill="#fff"/></svg><h1 id="merknaam">Eye on Eye Clan</h1></div>
    <nav class="nav" id="nav" aria-label="Onderdelen"></nav>
   </div>
   <div id="muur"></div>
@@ -385,7 +385,8 @@ function berichtenView(){const b=berichten();
  return `<section class="sectie"><h2>Berichten voor de appgroep</h2>${b.length?`<div class="berichten">${b.map(([t,x],i)=>`<article class="bericht"><h3>${esc(t)}</h3><textarea id="b${i}" rows="${Math.min(x.split("\n").length+1,16)}" readonly aria-label="${esc(t)}">${esc(x)}</textarea><button class="knop" data-kopieer="b${i}">Kopieer bericht</button></article>`).join("")}</div>`:'<p class="uitleg">Er zijn nu geen berichten om te delen.</p>'}</section>`}
 
 function nav(){$("nav").innerHTML=TABS.map(([k,t])=>`<button data-tab="${k}"${tab===k?' aria-current="page"':""}>${t}</button>`).join("")}
-function render(){nav();$("muur").innerHTML=tab==="overzicht"?muur():"";document.querySelector(".wall").classList.toggle("laag",tab!=="overzicht");$("voet").textContent=`Bijgewerkt ${klok(new Date(D.bijgewerkt))}. `;$("inhoud").innerHTML={overzicht:overzichtView,spelers:spelersView,opstelling:opstellingView,oorlogen:oorlogenView,berichten:berichtenView}[tab]();if(tab==="spelers")teller()}
+function merk(){const c=D.clans.find(x=>x.nr===1);if(!c)return;$("merknaam").textContent=c.naam;if(c.logo)$("merklogo").outerHTML=`<img id="merklogo" class="logo" src="${esc(c.logo)}" width="44" height="44" alt="">`}
+function render(){merk();nav();$("muur").innerHTML=tab==="overzicht"?muur():"";document.querySelector(".wall").classList.toggle("laag",tab!=="overzicht");$("voet").textContent=`Bijgewerkt ${klok(new Date(D.bijgewerkt))}. `;$("inhoud").innerHTML={overzicht:overzichtView,spelers:spelersView,opstelling:opstellingView,oorlogen:oorlogenView,berichten:berichtenView}[tab]();if(tab==="spelers")teller()}
 function teller(){$("teller").textContent=`${zichtbaar().length} leden`}
 function tabel(){$("rijen").innerHTML=rijen();$("kop").innerHTML=kop();teller()}
 
