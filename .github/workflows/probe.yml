@@ -1,0 +1,32 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          python3 - <<'P'
+          import json,os,urllib.request,urllib.error,urllib.parse
+          def g(u,h={}):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan",**h})
+              try:
+                  x=urllib.request.urlopen(r,timeout=60);return x.status,json.load(x)
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read()[:220]
+              except Exception as e:
+                  return str(e)[:60],None
+          K={"Authorization":"Bearer "+os.environ["COC_API_KEY"]}
+          B="https://cocproxy.royaleapi.dev/v1";C="https://api.clashk.ing"
+          o=g(C+"/openapi.json")[1]
+          for q in ["/v2/ranked/{seasonId}/groups/{leagueGroupId}","/v2/player/{playerTag}/ranked/{season}/group","/v2/player/{playerTag}/ranked/{seasonId}/battlelog","/v2/player/{playerTag}/league/history","/v2/player/{playerTag}/history/stats"]:
+              d=o["paths"][q]["get"];print("OP",q,(d.get("summary") or "")[:120],[ (x.get("name"),x.get("required")) for x in d.get("parameters",[])])
+          t="QUYLU8C0"
+          s,p=g(B+f"/players/%23{t}",K);sid=p["currentLeagueSeasonId"];psid=p["previousLeagueSeasonId"];cg=p["currentLeagueGroupTag"];pg=p["previousLeagueGroupTag"];print("ME",sid,cg,psid,pg)
+          e=lambda x:urllib.parse.quote(x,safe="")
+          for u in [f"/v2/player/%23{t}/league/history",f"/v2/player/%23{t}/ranked/{sid}/group",f"/v2/player/%23{t}/ranked/{psid}/group",f"/v2/player/%23{t}/ranked/{sid}/battlelog",f"/v2/player/%23{t}/ranked/{psid}/battlelog",f"/v2/ranked/{sid}/groups/{e(cg)}",f"/v2/ranked/{psid}/groups/{e(pg)}",f"/v2/ranked/{sid}/groups/{cg[1:]}",f"/v2/player/%23{t}/history/stats?type=ranked",f"/v2/player/%23{t}/battlelog/history"]:
+              s,d=g(C+u);print("CK",u,s,json.dumps(d)[:1100] if isinstance(d,(dict,list)) else d)
+          for u in [f"/leaguegroup/{e(cg)}",f"/leagues/ranked/{sid}/groups/{e(cg)}",f"/leaguetier/{sid}/groups/{e(cg)}"]:
+              s,d=g(B+u,K);print("API",u,s,str(d)[:200])
+          P
