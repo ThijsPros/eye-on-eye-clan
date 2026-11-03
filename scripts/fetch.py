@@ -644,8 +644,10 @@ def roof_bijwerken(clans):
                 "clan": tag, "start": w["startTime"], "einde": w.get("endTime"), "status": w.get("state"),
                 "buit": w.get("capitalTotalLoot"), "raids": w.get("raidsCompleted"), "aanvallen": w.get("totalAttacks"),
                 "wijken": w.get("enemyDistrictsDestroyed"), "beloning": w.get("offensiveReward"), "verdediging": w.get("defensiveReward"),
+                # De API geeft deelnemers alleen bij het laatste weekend, dus eerder bewaarde blijven staan.
                 "leden": [{"tag": m["tag"], "naam": m["name"], "aanv": m.get("attacks", 0), "limiet": m.get("attackLimit", 0),
-                           "bonus": m.get("bonusAttackLimit", 0), "buit": m.get("capitalResourcesLooted", 0)} for m in w.get("members", [])],
+                           "bonus": m.get("bonusAttackLimit", 0), "buit": m.get("capitalResourcesLooted", 0)}
+                          for m in w.get("members", [])] or oud.get("leden", []),
                 "rooster": sorted(rooster) or None,
             }
     write_json(pad, opslag)
