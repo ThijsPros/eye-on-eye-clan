@@ -1,0 +1,32 @@
+name: Bronnen onderzoeken
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 - <<'P'
+          import json,urllib.request,urllib.parse,time,itertools
+          def g(u):
+              try:
+                  return json.load(urllib.request.urlopen(urllib.request.Request('https://api.clashk.ing'+u,headers={'User-Agent':'eye-on-eye'}),timeout=40))
+              except Exception as e:
+                  print('ERR',u,e,str(getattr(e,'read',lambda:b'')()[:150]));return None
+          q=lambda t:urllib.parse.quote(t,safe='')
+          groups=[]
+          for c in ['#PYQ2RLCQ','#2RGYGLVC0','#2JYY0809P']:
+              s=g(f'/v2/cwl/{q(c)}/seasons?limit=8')
+              print('SEIZOENEN',str(s)[:200])
+              items=(s or {}).get('items',s if isinstance(s,list) else []) or []
+              for it in items[:8]:
+                  se=it if isinstance(it,str) else it.get('season')
+                  r=g(f'/v2/cwl/{q(c)}/group?season={se}')
+                  if r:
+                      if not groups: print('VOORBEELD',json.dumps(r)[:900])
+                      groups.append((c,se,r))
+                  time.sleep(.3)
+          print('AANTAL',len(groups))
+          P
