@@ -1,0 +1,21 @@
+name: Bronnen onderzoeken
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sS -m 30 https://api.clashk.ing/openapi.json -o o.json -w "openapi %{http_code} %{size_download}\n"
+          python3 - <<'P'
+          import json
+          d=json.load(open('o.json'))
+          print(d.get('info',{}).get('title'),d.get('info',{}).get('version'),len(d['paths']))
+          for p,v in d['paths'].items():
+              l=p.lower()
+              if any(k in l for k in ('war','hit','join','leave','clan-history','clanhistory','history','stats','activity')):
+                  for m,o in v.items():
+                      if m in('get','post'): print(m.upper(),p,'|',(o.get('summary') or '')[:70],'| auth' if o.get('security') else '')
+          P
