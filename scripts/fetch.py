@@ -12,6 +12,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -393,6 +394,28 @@ def archive_add(tag, wars):
     ARCHIVE[tag] = rows
 
 
+def leden_uit_historie(clan_tag, events, first, laatst):
+    """Iedereen die minstens een dag in de clan zat, ook zonder ooit een oorlog te spelen."""
+    per_speler = {}
+    for event in sorted(events or [], key=lambda e: e.get("time") or ""):
+        if event.get("tag") and event.get("time"):
+            per_speler.setdefault(event["tag"], []).append(event)
+    for tag, reeks in per_speler.items():
+        totaal, sinds = 0, None
+        for event in reeks:
+            moment = datetime.fromisoformat(event["time"][:19])
+            if event.get("type") == "join":
+                sinds = moment
+            elif sinds:
+                totaal += (moment - sinds).total_seconds()
+                sinds = None
+        al_lid = reeks[0].get("type") != "join"
+        if sinds or al_lid or totaal >= 86400:
+            begin, einde = reeks[0]["time"][:10], reeks[-1]["time"][:10]
+            first[tag] = min(first.get(tag, begin), begin)
+            laatst[tag] = max(laatst.get(tag, einde), einde)
+
+
 def backfill(clans, history):
     """Vult oorlogen en eerste datums aan. Draait een keer per dag."""
     today = NOW.strftime("%Y-%m-%d")
@@ -452,6 +475,9 @@ def backfill(clans, history):
             if war.get("tag"):
                 normalized["ronde"] = war["_ronde"]
             save_war(normalized)
+
+    for clan in clans:
+        leden_uit_historie(clan["tag"], clashking(f"/clan/{tag_url(clan['tag'])}/join-leave?limit=50000"), first, laatst)
 
     ours = {clan["tag"] for clan in clans}
     done = history.setdefault("inUitGehad", [])
@@ -829,7 +855,12 @@ def main():
 
     previous = {p["tag"]: p for p in read_json(DATA / "latest.json", {}).get("players", [])}
     players, failed, raw_sample, raws = {}, [], {}, {}
+    leden = {m["tag"] for clan in clans for m in clan.get("memberList", [])}
     for tag in tags:
+        # Oud-leden worden om de beurt een keer per dag opgehaald, leden elke ronde.
+        if tag not in leden and tag in previous and zlib.crc32(tag.encode()) % 24 != NOW.hour:
+            players[tag] = {**previous[tag], "verouderd": True}
+            continue
         try:
             raw = get("/players/" + tag_url(tag))
         except ApiError as error:
