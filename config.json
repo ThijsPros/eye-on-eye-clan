@@ -19,5 +19,6 @@
   ],
   "venster_dagen": 60,
   "grens_aanvallen": 18,
-  "bij_ons_sinds": {}
+  "bij_ons_sinds": {},
+  "maand_venster_dagen": 120
 }

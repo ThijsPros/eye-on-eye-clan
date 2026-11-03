@@ -18,11 +18,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "docs" / "data"
 WARS = DATA / "wars"
+HISTORIE = DATA / "historie"
+BASIS = ROOT / "data" / "excel-basis.json"
 CWL = DATA / "cwl"
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf8"))
 BASE = os.environ.get("COC_API_BASE", "https://cocproxy.royaleapi.dev/v1").rstrip("/")
 NOW = datetime.now(timezone.utc)
 CLASHKING = "https://api.clashk.ing"
+ROMEINS = {1: "I", 2: "II", 3: "III", 4: "IV"}
 
 PETS = {
     "L.A.S.S.I", "Electro Owl", "Mighty Yak", "Unicorn", "Frosty", "Diggy",
@@ -379,7 +382,7 @@ def backfill(clans, history):
     if history.get("ckDatum") == today:
         return
     first = history.setdefault("eerst", {})
-    cutoff = NOW - timedelta(days=CONFIG["venster_dagen"] + 35)
+    cutoff = NOW - timedelta(days=max(CONFIG["venster_dagen"] + 35, CONFIG["maand_venster_dagen"] + 10))
     complete = True
     for clan in clans:
         tag, safe_tag = clan["tag"], clan["tag"].strip("#")
@@ -467,9 +470,9 @@ def war_is_final(war):
     return False if not end else end < NOW - timedelta(hours=1)
 
 
-def own_stats(wars):
+def own_stats(wars, days=None):
     """Eigen telling per speler over het ingestelde venster."""
-    cutoff = NOW - timedelta(days=CONFIG["venster_dagen"])
+    cutoff = NOW - timedelta(days=days or CONFIG["venster_dagen"])
     stats = {}
     for war in wars:
         start = parse_time(war.get("start"))
@@ -508,6 +511,90 @@ def own_stats(wars):
         s["drieProcent"] = round(100 * s["drie"] / s["aanv"], 1) if s["aanv"] else None
         s["laatste"] = f"{s['laatste'][:4]}-{s['laatste'][4:6]}-{s['laatste'][6:]}" if s["laatste"] else None
     return stats
+
+
+def defence_stats(wars, days):
+    """Verdediging per speler, voor de maandregels."""
+    cutoff = NOW - timedelta(days=days)
+    uit = {}
+    for war in wars:
+        start = parse_time(war.get("start"))
+        if war["status"] == "preparation" or not start or start < cutoff:
+            continue
+        for attack in war.get("tegenAanvallen", []):
+            s = uit.setdefault(attack.get("doel"), {"keer": 0, "sterren": 0, "drie": 0})
+            s["keer"] += 1
+            s["sterren"] += attack["sterren"]
+            s["drie"] += attack["sterren"] == 3
+    return uit
+
+
+def basis_inpassen(history):
+    """Zet de vaste Excel-basis terug en brengt elke maandstand in dezelfde vorm."""
+    basis = read_json(BASIS, None)
+    if not basis or not basis.get("spelers"):
+        sys.exit("De Excel-basis ontbreekt. Data niet bijgewerkt.")
+    eerst = history.setdefault("eerst", {})
+    exact = history.setdefault("eerstExact", {})
+    for tag, maanden in basis["spelers"].items():
+        series = history["spelers"].setdefault(tag, {})
+        for maand, r in maanden.items():
+            stand = [r.get("helden"), r.get("dieren"), r.get("equip"), r.get("lgn")]
+            if any(x is not None for x in stand):
+                series[maand] = stand
+        begin = min(maanden) + "-01"
+        if not exact.get(tag) and begin < eerst.get(tag, "9999"):
+            eerst[tag] = begin
+    for series in history["spelers"].values():
+        for maand, stand in series.items():
+            vol = (stand + [None] * 4)[:4]
+            series[maand] = vol[:3] + [vol[3] or None]
+    history["maanden"] = sorted({*history["maanden"], *basis["maanden"]})
+    return basis["spelers"]
+
+
+def stand_bijwerken(series, month, earlier, current, stale=False):
+    """De eerste meting van een maand staat vast, net als de maandlijsten. Geeft de groei terug."""
+    if not stale and month not in series:
+        series[month] = current
+    now, before = series.get(month), series.get(earlier)
+    if not now or not before:
+        return None
+    verschil = lambda i: now[i] - before[i] if now[i] is not None and before[i] is not None else None
+    return {"h": verschil(0), "p": verschil(1), "e": verschil(2), "l": verschil(3) if now[3] and before[3] else None}
+
+
+def maand_record(player, raw, nummer, oorlog, verdediging):
+    """Maandregel uit de live data, met dezelfde velden als de Excel-basis."""
+    home = lambda items: {x["name"]: x["level"] for x in items if x.get("village", "home") == "home"}
+    troepen = home(raw.get("troops", []))
+    oorlog, verdediging = oorlog or {}, verdediging or {}
+    aantal = verdediging.get("keer")
+    record = {
+        "bron": "live", "naam": player["naam"], "lijst": ROMEINS.get(nummer), "th": player["th"], "xp": raw.get("expLevel"),
+        "league": player["league"], "lgn": player["lgn"] or None,
+        "helden": player["helden"], "dieren": player["dieren"], "equip": player["equip"],
+        "aanv": oorlog.get("aanv"), "gem": oorlog.get("gem"), "drie": oorlog.get("drieProcent"), "gemist": oorlog.get("gemis"),
+        "verd": aantal, "verdGem": round(verdediging["sterren"] / aantal, 2) if aantal else None,
+        "verdDrie": round(100 * verdediging["drie"] / aantal, 2) if aantal else None,
+        "heldenLvl": {k: v for k, v in home(raw.get("heroes", [])).items() if k not in ("Battle Machine", "Battle Copter")},
+        "dierenLvl": {k: v for k, v in troepen.items() if k in PETS},
+        "equipLvl": home(raw.get("heroEquipment", [])),
+    }
+    return {k: v for k, v in record.items() if v not in (None, {})}
+
+
+def historie_bijwerken(basis, month, records):
+    """Maanddetail per speler: de basis gaat altijd voor, een live maand blijft staan."""
+    for tag in {*basis, *records}:
+        path = HISTORIE / (tag.strip("#") + ".json")
+        detail = read_json(path, {})
+        oud = json.dumps(detail, sort_keys=True)
+        detail.update(basis.get(tag, {}))
+        if tag in records and month not in detail:
+            detail[month] = records[tag]
+        if json.dumps(detail, sort_keys=True) != oud or not path.exists():
+            write_json(path, dict(sorted(detail.items())))
 
 
 def average_duration(attacks):
@@ -618,6 +705,7 @@ def main():
     if not os.environ.get("COC_API_KEY"):
         sys.exit("COC_API_KEY ontbreekt")
     history = read_json(DATA / "history.json", {"maanden": [], "spelers": {}})
+    basis = basis_inpassen(history)
 
     clans = load_clans()
     if not clans:
@@ -700,10 +788,8 @@ def main():
     output = []
     for tag, player in players.items():
         series = history["spelers"].setdefault(tag, {})
-        current = [player["helden"], player["dieren"], player["equip"], player["lgn"]]
-        if not player.get("verouderd"):
-            series[month] = current
-        before = series.get(earlier)
+        current = [player["helden"], player["dieren"], player["equip"], player["lgn"] or None]
+        growth = stand_bijwerken(series, month, earlier, current, player.get("verouderd"))
         player = dict(player)
         player["inClan"] = player.get("clanTag") in clan_tags
         player["sinds"] = history.setdefault("eerst", {}).setdefault(tag, NOW.strftime("%Y-%m-%d"))
@@ -721,14 +807,8 @@ def main():
                 }
         if move and move.get("vorige"):
             player["vorigeClan"], player["overstap"] = move["vorige"], move["sinds"]
-        player["d"] = (
-            {"h": current[0] - before[0] if before[0] is not None else 0,
-             "p": current[1] - before[1] if before[1] is not None else 0,
-             "e": current[2] - before[2] if before[2] is not None else 0,
-             "l": current[3] - before[3] if len(before) > 3 and current[3] and before[3] else None}
-            if before else None
-        )
-        player["s"] = [(series[m] + [None])[:4] if m in series else None for m in labels]
+        player["d"] = growth
+        player["s"] = [series.get(m) for m in labels]
         player["cw"] = stats.get(tag)
         output.append(player)
 
@@ -737,6 +817,13 @@ def main():
     summaries = [war_summary(w) for w in reversed(wars)][:200]
 
     write_json(DATA / "history.json", history)
+    maand_dagen = CONFIG["maand_venster_dagen"]
+    maand_oorlog, maand_verdediging = own_stats(wars, maand_dagen), defence_stats(wars, maand_dagen)
+    clan_nummers = {c["tag"]: c["nr"] for c in clan_status}
+    historie_bijwerken(basis, month, {
+        tag: maand_record(players[tag], raw, clan_nummers.get(players[tag].get("clanTag")), maand_oorlog.get(tag), maand_verdediging.get(tag))
+        for tag, raw in raws.items()
+    })
     archive = read_json(DATA / "archief.json", {})
     archive.update({tag: sorted(rows.values(), key=lambda r: r["einde"], reverse=True) for tag, rows in ARCHIVE.items()})
     for tag, entries in log_rows.items():

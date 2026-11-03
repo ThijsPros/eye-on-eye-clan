@@ -1,9 +1,11 @@
-"""Eenmalige import van de oude maandlijsten (Lijst.xlsx en Lijst2.xlsx).
+"""Bouwt de vaste Excel-basis uit de oude maandlijsten (Lijst.xlsx en Lijst2.xlsx).
 
 Gebruik: python scripts/import_excel.py Lijst.xlsx Lijst2.xlsx
-Schrijft docs/data/history.json bij en maakt docs/data/historie/TAG.json.
-Donaties, capital en de Excel-bestanden zelf blijven buiten de repository.
+Schrijft alleen data/excel-basis.json en de controlesom. De ophaalronde past deze basis
+elke keer in en wijzigt hem nooit. Donaties, capital, keuzes, plekken en de Excel-bestanden
+zelf blijven buiten de repository.
 """
+import hashlib
 import json
 import re
 import sys
@@ -11,7 +13,7 @@ from pathlib import Path
 
 import openpyxl
 
-DATA = Path(__file__).resolve().parent.parent / "docs" / "data"
+MAP = Path(__file__).resolve().parent.parent / "data"
 MAANDEN = {
     "Oktober": "2025-10", "November": "2025-11", "December": "2025-12", "Januari": "2026-01",
     "Februari": "2026-02", "Maart": "2026-03", "April": "2026-04", "Mei": "2026-05", "Juni1": "2026-06",
@@ -21,7 +23,6 @@ MAANDEN = {
 HELDEN = ["Barbarian King", "Archer Queen", "Minion Prince", "Grand Warden", "Royal Champion", "Dragon Duke"]
 BUILDER = {"Battle Machine", "Battle Copter"}
 GEEN_LEVEL = {"Tag", "Name", "TH", "BH", "Heldenlevels", "Dierenlevels", "Helden", "Dieren", "Equipment", "Totaal", None}
-HUIDIG = "2026-11"
 
 
 def blad_soort(naam):
@@ -145,39 +146,24 @@ def main():
     uit = {}
     lees(sys.argv[1], "I", uit)
     lees(sys.argv[2], "II", uit)
-    hist = json.loads((DATA / "history.json").read_text())
-    map_ = DATA / "historie"
-    map_.mkdir(exist_ok=True)
-    gewijzigd = nieuw = 0
-    for tag, maanden in uit.items():
-        reeks = hist["spelers"].setdefault(tag, {})
-        if not reeks:
-            nieuw += 1
-        detail = {}
+    spelers = {}
+    for tag, maanden in sorted(uit.items()):
         for m in sorted(maanden):
             r = samenvoegen(maanden[m])
-            stand = [som_of(r, "helden", "heldenLvl"), som_of(r, "dieren", "dierenLvl"), som_of(r, "equip", "equipLvl"), league_nummer(r.get("league"))]
-            oud = reeks.get(m)
-            if m == HUIDIG and oud:
-                stand = oud
-            elif oud:
-                stand[3] = stand[3] or (oud[3] if len(oud) > 3 else None)
-                gewijzigd += stand[:3] != oud[:3]
-            if stand[0] is not None or stand[3] is not None:
-                reeks[m] = stand
-            w = r.get("war") or {}
-            detail[m] = {k: v for k, v in {
-                "naam": r.get("naam"), "lijst": r["lijst"], "th": r.get("th"), "xp": r.get("xp"), "league": r.get("league"),
-                                **w, "heldenLvl": r.get("heldenLvl"), "dierenLvl": r.get("dierenLvl"), "equipLvl": r.get("equipLvl"),
-            }.items() if v not in (None, {})}
-        (map_ / f"{tag[1:]}.json").write_text(json.dumps(detail, ensure_ascii=False, separators=(",", ":")))
-        eerste = min(detail) + "-01"
-        eerst = hist.setdefault("eerst", {})
-        if not hist.get("eerstExact", {}).get(tag) and eerste < eerst.get(tag, "9999"):
-            eerst[tag] = eerste
-    hist["maanden"] = sorted({*hist["maanden"], *(m for s in uit.values() for m in s)})
-    (DATA / "history.json").write_text(json.dumps(hist, ensure_ascii=False, indent=1))
-    print(f"{len(uit)} spelers, {nieuw} nieuw, {gewijzigd} maandstanden gewijzigd, maanden {hist['maanden'][0]} t/m {hist['maanden'][-1]}")
+            record = {
+                "bron": "excel", "naam": r.get("naam"), "lijst": r["lijst"], "th": r.get("th"), "xp": r.get("xp"),
+                "league": r.get("league"), "lgn": league_nummer(r.get("league")),
+                "helden": som_of(r, "helden", "heldenLvl"), "dieren": som_of(r, "dieren", "dierenLvl"), "equip": som_of(r, "equip", "equipLvl"),
+                **(r.get("war") or {}), "heldenLvl": r.get("heldenLvl"), "dierenLvl": r.get("dierenLvl"), "equipLvl": r.get("equipLvl"),
+            }
+            spelers.setdefault(tag, {})[m] = {k: v for k, v in record.items() if v not in (None, {})}
+    maanden = sorted({m for s in spelers.values() for m in s})
+    basis = {"versie": 1, "maanden": maanden, "spelers": spelers}
+    MAP.mkdir(exist_ok=True)
+    tekst = json.dumps(basis, ensure_ascii=False, separators=(",", ":"))
+    (MAP / "excel-basis.json").write_text(tekst, encoding="utf8")
+    (MAP / "excel-basis.sha256").write_text(hashlib.sha256(tekst.encode("utf8")).hexdigest() + "\n")
+    print(f"{len(spelers)} spelers, {sum(len(s) for s in spelers.values())} maandregels, {maanden[0]} t/m {maanden[-1]}")
 
 
 main()

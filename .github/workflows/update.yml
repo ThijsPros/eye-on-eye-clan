@@ -25,6 +25,8 @@ jobs:
         env:
           COC_API_KEY: ${{ secrets.COC_API_KEY }}
         run: python scripts/fetch.py
+      - name: Data controleren
+        run: python scripts/check_data.py
       - name: Data opslaan
         run: |
           git config user.name "eye-on-eye-bot"
