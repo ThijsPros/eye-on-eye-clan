@@ -166,7 +166,7 @@ def normalize_war(raw, war_id, kind, clan_tag, season=None):
             "th": m.get("townhallLevel"),
             "pos": m.get("mapPosition"),
             "aanvallen": [
-                {"sterren": a["stars"], "procent": a["destructionPercentage"], "doel": a["defenderTag"], "volgorde": a.get("order")}
+                {"sterren": a["stars"], "procent": a["destructionPercentage"], "doel": a["defenderTag"], "volgorde": a.get("order"), "duur": a.get("duration")}
                 for a in m.get("attacks", [])
             ],
         }
@@ -184,7 +184,7 @@ def normalize_war(raw, war_id, kind, clan_tag, season=None):
         "clan": side_info(side),
         "tegenstander": side_info(opponent),
         "tegenAanvallen": [
-            {"sterren": a["stars"], "doel": a["defenderTag"]}
+            {"sterren": a["stars"], "doel": a["defenderTag"], "duur": a.get("duration")}
             for m in opponent.get("members", []) for a in m.get("attacks", [])
         ],
         "leden": members,
@@ -271,11 +271,16 @@ def own_stats(wars):
     return stats
 
 
+def average_duration(attacks):
+    durations = [a["duur"] for a in attacks if a.get("duur") is not None]
+    return round(sum(durations) / len(durations)) if durations else None
+
+
 def war_summary(war):
     members = war["leden"]
     per_member = war["aanvallenPerLid"]
     size = war.get("grootte") or len(members)
-    our_attacks = [{"sterren": a["sterren"], "doel": a["doel"]} for m in members for a in m["aanvallen"]]
+    our_attacks = [a for m in members for a in m["aanvallen"]]
     ours, theirs = war["clan"], war["tegenstander"]
     limits = {}
     if "tegenAanvallen" in war:
@@ -289,6 +294,14 @@ def war_summary(war):
         "id": war["id"],
         "soort": war["soort"],
         "ronde": war.get("ronde"),
+        "seizoen": war.get("seizoen"),
+        "perLid": per_member,
+        "gemTijdOns": average_duration(our_attacks),
+        "gemTijdZij": average_duration(war.get("tegenAanvallen", [])),
+        "leden": [
+            {"naam": m["naam"], "pos": m.get("pos"), "aanvallen": [{"sterren": a["sterren"], "procent": a["procent"]} for a in m["aanvallen"]]}
+            for m in sorted(members, key=lambda m: m.get("pos") or 99)
+        ],
         "status": "onvolledig" if war["status"] != "warEnded" and war_is_final(war) else war["status"],
         "start": war.get("start"),
         "einde": war.get("einde"),
