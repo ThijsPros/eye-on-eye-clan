@@ -343,6 +343,32 @@ def unbeaten_streak(results):
     return count
 
 
+ARCHIVE = {}
+
+
+def archive_add(tag, wars):
+    """Korte regel per afgelopen oorlog, voor de tab Oorlogen."""
+    rows = {}
+    wars = sorted((w for w in wars if w.get("state", "warEnded") == "warEnded" and w.get("endTime") and w.get("startTime")), key=lambda w: w["startTime"])
+    months = {}
+    for war in wars:
+        ours, theirs = (war["clan"], war["opponent"]) if war["clan"].get("tag") == tag else (war["opponent"], war["clan"])
+        league = bool(war.get("tag")) or not war.get("attacksPerMember")
+        number = None
+        if league:
+            month = war["startTime"][:6]
+            months[month] = number = months.get(month, 0) + 1
+        per_member = 1 if league else war.get("attacksPerMember") or 2
+        rows[war["endTime"]] = {
+            "soort": "cwl" if league else "oorlog", "ronde": number, "start": war["startTime"], "einde": war["endTime"],
+            "grootte": war.get("teamSize"), "totaal": (war.get("teamSize") or 0) * per_member, "gebruikt": ours.get("attacks") or 0,
+            "tegen": theirs.get("name"), "tegenLogo": (theirs.get("badgeUrls") or {}).get("small"),
+            "s": [ours.get("stars") or 0, theirs.get("stars") or 0],
+            "p": [ours.get("destructionPercentage") or 0, theirs.get("destructionPercentage") or 0],
+        }
+    ARCHIVE[tag] = rows
+
+
 def backfill(clans, history):
     """Vult oorlogen en eerste datums aan. Draait een keer per dag."""
     today = NOW.strftime("%Y-%m-%d")
@@ -359,13 +385,16 @@ def backfill(clans, history):
         if wars is None:
             complete = False
             continue
-        # De oudere route gaat verder terug, maar dient alleen voor eerste datums.
-        for war in clashking(f"/war/{tag_url(tag)}/previous?limit=2000") or []:
+        # De oudere route gaat verder terug en vult eerste datums en het archief aan.
+        known = {w.get("endTime") for w in wars}
+        older = clashking(f"/war/{tag_url(tag)}/previous?limit=2000") or []
+        for war in older:
             if war.get("startTime"):
                 side = war["clan"] if war["clan"].get("tag") == tag else war["opponent"]
                 date = to_date(war["startTime"])
                 for member in side.get("members", []):
                     first[member["tag"]] = min(first.get(member["tag"], date), date)
+        archive_add(tag, list(wars) + [w for w in older if w.get("endTime") not in known])
         wars = [w for w in wars if w.get("state") == "warEnded" and w.get("startTime")]
         results = history.setdefault("uitslagen", {}).setdefault(tag, {})
         for war in wars:
@@ -584,6 +613,10 @@ def main():
         official = set(regular)
         counted = {end: value for end, value in results.items() if end < cutoff or end in official}
         status["ongeslagen"] = unbeaten_streak(counted)
+        if status["tag"] in ARCHIVE:
+            rows = ARCHIVE[status["tag"]]
+            for end in [e for e, r in rows.items() if r["soort"] == "oorlog" and e >= cutoff and e not in official and regular]:
+                del rows[end]
     month = NOW.strftime("%Y-%m")
     if month not in history["maanden"]:
         history["maanden"].append(month)
@@ -631,6 +664,10 @@ def main():
     summaries = [war_summary(w) for w in reversed(wars)][:200]
 
     write_json(DATA / "history.json", history)
+    if ARCHIVE:
+        archive = read_json(DATA / "archief.json", {})
+        archive.update({tag: sorted(rows.values(), key=lambda r: r["einde"], reverse=True) for tag, rows in ARCHIVE.items()})
+        write_json(DATA / "archief.json", archive)
     write_json(DATA / "latest.json", {
         "bijgewerkt": NOW.isoformat(timespec="seconds"),
         "sindsBegin": min(history["eerst"].values()),

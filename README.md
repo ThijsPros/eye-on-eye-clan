@@ -45,6 +45,7 @@ In `config.json`:
 - `docs/data/history.json`: maandstanden per speler, voor de groei per maand.
 - `docs/data/leiding.json`: opstelling en leiding-keuzes, bewerkbaar op de site.
 - `docs/data/wars/`: elke opgeslagen oorlog.
+- `docs/data/archief.json`: korte regel per afgelopen oorlog voor de tab Oorlogen.
 - `docs/data/latest.json`: de data voor de website, gemaakt door het script.
 
 Alle spelerdata komt uit de API. Alleen de opstelling en leiding-keuzes worden

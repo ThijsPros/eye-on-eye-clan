@@ -250,7 +250,7 @@ const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice
 const klok=d=>d.toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
-let D,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
+let D,archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
 const clanVan=t=>D.clans.find(c=>c.tag===t);
 function schild(nr,maat=40){const c=nr?D?.clans.find(x=>x.nr===nr):null;
  if(c?.logo)return `<img class="logo" src="${esc(c.logo)}" width="${maat}" height="${maat}" alt="${esc(c.naam)}" loading="lazy">`;
@@ -442,12 +442,17 @@ async function gh(opties={}){const r=await fetch(LEIDING_URL+(opties.method?"":"
 async function startBewerken(){opslagMelding="Laden…";render();try{const f=await gh();sha=f.sha;L=JSON.parse(tekstVan(f.content));bewerk=true;gewijzigd=0;opslagMelding=""}catch(e){opslagMelding=ghFout(e.status);if(e.status===401)sleutelZet(null)}render()}
 async function opslaan(){opslagMelding="Opslaan…";render();try{const tekst=JSON.stringify(L,null,1)+"\n",r=await gh({method:"PUT",body:JSON.stringify({message:"Opstelling bijwerken",content:b64(tekst),sha,branch:"main"})});sha=r.content.sha;gewijzigd=0;opslagMelding="Opgeslagen. Voor anderen zichtbaar binnen enkele minuten."}catch(e){opslagMelding=ghFout(e.status)}render()}
 
-function oorlogenView(){const w=D.oorlogen.filter(x=>(x.status==="warEnded"||x.status==="onvolledig")&&(!oorlogClan||x.clan.tag===oorlogClan)&&(!oorlogSoort||x.soort===oorlogSoort)).sort((a,b)=>(b.einde||"").localeCompare(a.einde||""));
+async function laadArchief(){if(archief)return;try{const r=await fetch("data/archief.json",{cache:"no-store"});if(!r.ok)return;const a=await r.json();
+ archief=Object.entries(a).flatMap(([tag,rows])=>{const c=clanVan(tag);return rows.map(r=>({id:`a-${tag}-${r.einde}`,soort:r.soort,ronde:r.ronde,status:"warEnded",start:r.start,einde:r.einde,grootte:r.grootte,gebruikt:r.gebruikt,totaal:r.totaal,open:[],
+  clan:{tag,name:c?.naam,stars:r.s[0],destructionPercentage:r.p[0]},tegenstander:{name:r.tegen,logo:r.tegenLogo,stars:r.s[1],destructionPercentage:r.p[1]}}))});if(tab==="oorlogen")render()}catch{}}
+function oorlogenView(){laadArchief();const eigen=D.oorlogen.filter(x=>x.status==="warEnded"||x.status==="onvolledig"),bekend=new Set(eigen.map(x=>x.clan.tag+x.einde));
+ const alles=[...eigen,...(archief||[]).filter(x=>!bekend.has(x.clan.tag+x.einde))];
+ const w=alles.filter(x=>(!oorlogClan||x.clan.tag===oorlogClan)&&(!oorlogSoort||x.soort===oorlogSoort)).sort((a,b)=>(b.einde||"").localeCompare(a.einde||""));
  const keuze=`<div class="tools"><select id="oorlogclan" aria-label="Filter op clan"><option value="">Alle clans</option>${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(c=>`<option value="${esc(c.tag)}"${oorlogClan===c.tag?" selected":""}>${esc(c.naam)}</option>`).join("")}</select><select id="oorlogsoort" aria-label="Filter op soort oorlog"><option value="">CW en CWL</option><option value="oorlog"${oorlogSoort==="oorlog"?" selected":""}>CW</option><option value="cwl"${oorlogSoort==="cwl"?" selected":""}>CWL</option></select><span class="teller">${w.length} oorlogen</span></div>`;
  if(!w.length)return `<section class="sectie"><h2>Uitslagen</h2>${keuze}<p class="uitleg">Geen afgelopen oorlogen gevonden. Lopende oorlogen staan op de statuspagina.</p></section>`;
- return `<section class="sectie"><h2>Uitslagen</h2>${keuze}<div class="lijst">${w.map(x=>{const c=clanVan(x.clan.tag),a=x.clan.stars??0,b=x.tegenstander.stars??0,heel=x.status==="warEnded",o=heel?oordeel(x):null,kl=o?.[0]==="win"?"win":o?.[0]==="ver"?"ver":"";
+ return `<section class="sectie"><h2>Uitslagen</h2>${keuze}<div class="lijst">${w.slice(0,oorlogAantal).map(x=>{const c=clanVan(x.clan.tag),a=x.clan.stars??0,b=x.tegenstander.stars??0,heel=x.status==="warEnded",o=heel?oordeel(x):null,kl=o?.[0]==="win"?"win":o?.[0]==="ver"?"ver":"";
   return `<article class="uitslag">${schild(c?.nr,32)}<div class="wie"><b>tegen ${esc(x.tegenstander.name)}</b><span>${x.soort==="cwl"?`CWL ronde ${x.ronde??"?"}`:"Clanoorlog"}, ${datum(iso(x.start))}</span></div>
-  <div class="sc ${kl}">${a} – ${b}<small>${o?o[1]:"Einde niet gezien"}, ${x.gebruikt}/${x.totaal}</small></div></article>`}).join("")}</div></section>`}
+  <div class="sc ${kl}">${a} – ${b}<small>${o?o[1]:"Einde niet gezien"}, ${x.gebruikt}/${x.totaal}</small></div></article>`}).join("")}</div>${w.length>oorlogAantal?`<button class="knop licht" data-actie="meer">Toon meer oorlogen</button>`:""}</section>`}
 
 function berichten(){const uit=[];
  D.oorlogen.filter(w=>w.status==="inWar").forEach(w=>{const namen=w.open.map(o=>`- ${o.naam}${o.over>1?` (${o.over} over)`:""}`).join("\n");
@@ -476,7 +481,7 @@ addEventListener("click",async e=>{const t=e.target.closest("[data-tab]");if(t){
   if(a==="sleutel"){const w=$("sleutel").value.trim();if(w){sleutelZet(w);startBewerken()}}
   if(a==="stop"){if(!gewijzigd||confirm("Niet-opgeslagen wijzigingen weggooien?")){bewerk=false;gewijzigd=0;opslagMelding="";await laadLeiding();render()}}
   if(a==="vergeet"){sleutelZet(null);bewerk=false;gewijzigd=0;opslagMelding="Sleutel verwijderd uit deze browser.";await laadLeiding();render()}
-  if(a==="opslaan")opslaan();return}
+  if(a==="opslaan")opslaan();if(a==="meer"){oorlogAantal+=100;render()}return}
  const c=e.target.closest("[data-kopieer]");if(c){const oud=c.textContent;const v=$(c.dataset.kopieer);try{await navigator.clipboard.writeText(v.value);c.textContent="Gekopieerd"}catch{v.select();c.textContent="Selecteer de tekst en kopieer zelf"}setTimeout(()=>c.textContent=oud,2200)}});
 setInterval(ververs,3e4);
 document.addEventListener("visibilitychange",ververs);
@@ -484,7 +489,7 @@ addEventListener("toggle",e=>{const d=e.target;if(d.dataset?.lijst){d.open?dicht
 setInterval(()=>document.querySelectorAll("[data-tot]").forEach(x=>{x.textContent=resttijd(+x.dataset.tot)}),1e3);
 addEventListener("input",e=>{if(e.target.id==="zoek"){zoek=e.target.value.trim().toLowerCase();tabel()}if(e.target.id==="kzoek"){oorlogZoek=e.target.value.trim().toLowerCase();$("krijen").innerHTML=keuzeRijen()}});
 addEventListener("beforeunload",e=>{if(gewijzigd)e.preventDefault()});
-addEventListener("change",e=>{if(e.target.id==="filter"){filter=e.target.value;tabel()}if(e.target.id==="clanf"){clanFilter=e.target.value;tabel()}if(e.target.id==="oorlogclan"){oorlogClan=e.target.value;render()}if(e.target.id==="oorlogsoort"){oorlogSoort=e.target.value;render()}
+addEventListener("change",e=>{if(e.target.id==="filter"){filter=e.target.value;tabel()}if(e.target.id==="clanf"){clanFilter=e.target.value;tabel()}if(e.target.id==="oorlogclan"){oorlogClan=e.target.value;oorlogAantal=100;render()}if(e.target.id==="oorlogsoort"){oorlogSoort=e.target.value;oorlogAantal=100;render()}
  const t=e.target;if(t.dataset.veld){zetKeuze(t.dataset.p,t.dataset.veld,t.value);render()}
  if(t.dataset.slot){const n=+t.dataset.slot,nieuw=t.value,oud=D.players.find(p=>K(p).plek===n);if(oud&&pid(oud)===nieuw)return;
   const herkomst=nieuw?(L.spelers[nieuw]?.plek??null):null;if(oud)zetKeuze(pid(oud),"plek",herkomst);if(nieuw)zetKeuze(nieuw,"plek",n);render()}});
