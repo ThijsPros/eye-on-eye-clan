@@ -1,0 +1,35 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          python3 - <<'P'
+          import json,os,urllib.request,urllib.error,collections
+          def g(u,h={}):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan",**h})
+              try:
+                  x=urllib.request.urlopen(r,timeout=60);return x.status,json.load(x)
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read()[:200]
+              except Exception as e:
+                  return str(e)[:60],None
+          K={"Authorization":"Bearer "+os.environ["COC_API_KEY"]}
+          B="https://cocproxy.royaleapi.dev/v1"
+          s,d=g(B+"/players/%2380YULR99P/battlelog",K);i=d["items"];print("BL",s,len(i),json.dumps(i[0])[:700]);print("TYPES",collections.Counter((x.get("battleType"),x.get("attack")) for x in i));print("BL2",json.dumps(i[-1])[:400]);print("KEYS",sorted({k for x in i for k in x}))
+          s,d=g(B+"/leaguetiers",K);print("LT",s,json.dumps(d["items"][-1])[:400],len(d["items"]));print("LT2",json.dumps(d["items"][20])[:300])
+          s,p=g(B+"/players/%2380YULR99P",K);print("PL",{k:p.get(k) for k in ("trophies","attackWins","defenseWins","currentLeagueGroupTag","currentLeagueSeasonId","previousLeagueGroupTag","previousLeagueSeasonId")},p.get("leagueTier"))
+          print("ACH",[(a["name"],a["value"]) for a in p["achievements"] if a["name"] in("League Follower","League All-Star","Conqueror","Unbreakable")])
+          t=p.get("currentLeagueGroupTag")
+          for x in [f"/leaguegroup/{t}",f"/leaguetournaments/{t}",f"/leagues/group/{t}",f"/leaguegroups/{t}"]:
+              s,d=g(B+x.replace("#","%23"),K);print("LG",x,s,str(d)[:200])
+          o=g("https://api.clashk.ing/openapi.json")[1];
+          for q in ["/v2/player/{playerTag}/league/history","/v2/player/{playerTag}/battlelog/history","/v2/stats/ranked","/v2/stats/league/tournaments/{seasonId}/tiers/{leagueTierId}"]:
+              print("OP",q,(o["paths"][q]["get"].get("description") or o["paths"][q]["get"].get("summary") or "")[:200],[x.get("name") for x in o["paths"][q]["get"].get("parameters",[])])
+          print("OPL",[p for p in o["paths"] if "ranked" in p or "tournament" in p or "league" in p.lower()][:30])
+          for u in ["/v2/player/%2380YULR99P/league/history","/v2/player/%2380YULR99P/battlelog/history?limit=3","/v2/stats/ranked"]:
+              s,d=g("https://api.clashk.ing"+u);print("CK",u,s,json.dumps(d)[:900] if isinstance(d,(dict,list)) else d)
+          P
