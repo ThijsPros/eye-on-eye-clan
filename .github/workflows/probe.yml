@@ -1,0 +1,30 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          python3 - <<'P'
+          import json,os,urllib.request,urllib.error
+          B="https://cocproxy.royaleapi.dev/v1"
+          def g(p):
+              r=urllib.request.Request(B+p,headers={"Authorization":"Bearer "+os.environ["COC_API_KEY"]})
+              try:
+                  return 200,json.load(urllib.request.urlopen(r,timeout=30))
+              except urllib.error.HTTPError as e:
+                  return e.code,None
+          def vorm(v):
+              if isinstance(v,dict): return {k:(vorm(x) if isinstance(x,dict) else type(x).__name__) for k,x in list(v.items())[:30]}
+              if isinstance(v,list): return ["list",len(v),vorm(v[0]) if v else None]
+              return v if isinstance(v,(int,bool)) else type(v).__name__
+          s,c=g("/clans/%23PYQ2RLCQ");print("CLAN",s,{k:vorm(v) for k,v in c.items() if k!="memberList"});print("LID",vorm(c["memberList"][0]))
+          s,p=g("/players/%2380YULR99P");print("SPELER",s,{k:vorm(v) for k,v in p.items() if k not in("troops","spells","heroes","heroEquipment","achievements")})
+          print("ACH",[a["name"] for a in p["achievements"]])
+          print("ACHVB",p["achievements"][0])
+          print("SP",len(p.get("spells",[])),"TR",len(p.get("troops",[])))
+          for x in ["/clans/%23PYQ2RLCQ/capitalraidseasons?limit=1","/goldpass/seasons/current","/clans/%23PYQ2RLCQ/warlog?limit=1","/warleagues","/leagues","/leaguetiers","/capitalleagues","/builderbaseleagues","/labels/clans?limit=3","/players/%2380YULR99P/battlelog","/players/%2380YULR99P/rankedbattles","/clans/%23PYQ2RLCQ/members?limit=1","/locations/32000006/rankings/clans?limit=1"]:
+              s,d=g(x);print("EP",x,s,json.dumps(vorm(d))[:500] if d else "")
+          P
