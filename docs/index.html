@@ -292,6 +292,7 @@ a.knop{text-decoration:none;display:inline-block}
 .vlag.oud{background:rgb(255 143 132/.2);color:var(--bad)}
 .lvls.kolommen{columns:2 240px;column-gap:24px}
 .lvls.kolommen li{break-inside:avoid}
+.voortgang{float:right;color:var(--gold);font-size:15px}
 .grafiek polyline.gat{stroke-dasharray:3 5;stroke-width:1.6;opacity:.7}
 .grafiek .rast{stroke:var(--line);stroke-width:1}
 .grafiek .as{fill:var(--muted);font-size:11px}
@@ -641,6 +642,7 @@ function equipmentView(l){const per=Object.fromEntries(l.map(x=>[x.naam,x])),bek
  return Object.entries(EQUIPMENT).map(([h,n])=>{const r=n.map(x=>per[x]).filter(Boolean).sort((a,b)=>b.lvl-a.lvl);return r.length?blok(h,r):""}).join("")+(rest.length?blok("Overig",rest):"")}
 const pctTekst=(a,b)=>b?Math.round(100*a/b)+"%":"–";
 const gemTekst=(a,b)=>b?(a/b).toFixed(2).replace(".",","):"–";
+function voortgang(l){const r=(l||[]).filter(x=>x.max);if(!r.length)return"";const a=r.reduce((t,x)=>t+x.lvl,0),b=r.reduce((t,x)=>t+x.max,0);return `<span class="voortgang" title="${getal(a)} van ${getal(b)} levels">${Math.round(100*a/b)}%</span>`}
 function balkRij(x){const p=x.max?Math.round(100*x.lvl/x.max):100;return `<li><span class="sn">${esc(x.naam)}</span><span class="lvlbar ${x.max&&x.lvl>=x.max?"vol":""}"><i style="width:${p}%"></i></span><b>${x.lvl}${x.max?`/${x.max}`:""}</b></li>`}
 function tegel(w,l,k=""){return `<div class="tegel ${k}"><b>${w}</b>${esc(l)}</div>`}
 const eventRomeins=n=>["","I","II","III","IV"][n]??"?";
@@ -699,12 +701,12 @@ function spelerView(){const tag=spelerTag,z=spelerData[tag];laadSpeler(tag);cons
  return `<section class="sectie">${terug}${kop}${tegels}
  <div class="profiel"><div class="paneel"><h3>Oorlogen, laatste ${D.vensterDagen} dagen</h3><div class="tablebox plat"><table><thead><tr><th><span class="kp">Soort</span></th><th class="n"><span class="kp">Aanvallen</span></th><th class="n"><span class="kp">Aanvallen gedaan</span></th><th class="n"><span class="kp">Aanvallen gemist</span></th><th class="n"><span class="kp">Gem ★</span></th><th class="n"><span class="kp">3★</span></th></tr></thead><tbody>${rij("CW",so.oorlog)}${rij("CWL",so.cwl)}${rij("Totaal",tot,"totaalrij")}</tbody></table></div></div>
  <div class="paneel"><h3>Verdediging, laatste ${D.vensterDagen} dagen</h3><div class="tegels klein">${tegel(d.keer,"keer aangevallen")}${tegel(gemTekst(d.sterren,d.keer),"sterren tegen","t-goud")}${tegel(pctTekst(d.drie,d.keer),"3 sterren tegen")}</div></div>
- <div class="paneel"><h3>Helden</h3><ul class="lvls">${z.helden.map(balkRij).join("")}</ul></div>
- <div class="paneel"><h3>Dieren</h3><ul class="lvls">${z.dieren.map(balkRij).join("")||'<li class="weg">Geen dieren</li>'}</ul></div>
+ <div class="paneel"><h3>Helden${voortgang(z.helden)}</h3><ul class="lvls">${z.helden.map(balkRij).join("")}</ul></div>
+ <div class="paneel"><h3>Dieren${voortgang(z.dieren)}</h3><ul class="lvls">${z.dieren.map(balkRij).join("")||'<li class="weg">Geen dieren</li>'}</ul></div>
   <div class="paneel"><h3>Carrière</h3><div class="tegels klein">${tegel(getal(z.warSterren),"oorlogssterren","t-goud")}${tegel(getal(z.kapitaal),"clankapitaal")}</div></div></div>
- <div class="paneel"><h3>Equipment</h3><div class="eqgrid">${equipmentView(z.equipment)}</div></div>
- ${z.spreuken?.length?`<div class="paneel"><h3>Spreuken</h3><ul class="lvls kolommen">${z.spreuken.map(balkRij).join("")}</ul></div>`:""}
- ${z.troepen?.length?`<div class="paneel"><h3>Troepen</h3><ul class="lvls kolommen">${z.troepen.map(balkRij).join("")}</ul></div>`:""}
+ <div class="paneel"><h3>Equipment${voortgang(z.equipment)}</h3><div class="eqgrid">${equipmentView(z.equipment)}</div></div>
+ ${z.spreuken?.length?`<div class="paneel"><h3>Spreuken${voortgang(z.spreuken)}</h3><ul class="lvls kolommen">${z.spreuken.map(balkRij).join("")}</ul></div>`:""}
+ ${z.troepen?.length?`<div class="paneel"><h3>Troepen${voortgang(z.troepen)}</h3><ul class="lvls kolommen">${z.troepen.map(balkRij).join("")}</ul></div>`:""}
  ${groei?`<div class="paneel"><h3>Ontwikkeling per maand</h3><div class="grafieken">${groei}</div>${gat?'<p class="uitleg">Een stippellijn betekent dat de maanden ertussen niet gemeten zijn.</p>':""}</div>`:""}${maandTabel(hist)}
  ${z.gemist.length?`<div class="paneel"><h3>Gemiste aanvallen</h3><ul class="gemist">${z.gemist.map(g=>`<li>${datum(iso(g.datum))}: ${g.aantal} tegen ${esc(g.tegen)} (${g.soort==="cwl"?"CWL":"CW"})</li>`).join("")}</ul></div>`:""}
  <div class="paneel"><h3>Aanvallen</h3>${aanval?`<div class="tablebox plat"><table><thead><tr><th><span class="kp">Datum</span></th><th class="opt"><span class="kp">Soort</span></th><th class="opt"><span class="kp">Tegen clan</span></th><th><span class="kp">Doel</span></th><th><span class="kp">Resultaat</span></th><th class="n opt"><span class="kp">Tijd</span></th></tr></thead><tbody>${aanval}</tbody></table></div>`:'<p class="uitleg">Geen aanvallen in deze periode.</p>'}</div></section>`}
