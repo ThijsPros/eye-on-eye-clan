@@ -448,6 +448,7 @@ def backfill(clans, history):
             continue
         own_events = sorted((e for e in events if e.get("clan") in ours and e.get("time")), key=lambda e: e["time"])
         if own_events:
+            laatst[tag] = max(laatst.get(tag, ""), own_events[-1]["time"][:10])
             date = own_events[0]["time"][:10]
             if date <= first.get(tag, date):
                 first[tag] = date
@@ -728,6 +729,8 @@ def main():
         sys.exit("COC_API_KEY ontbreekt")
     history = read_json(DATA / "history.json", {"maanden": [], "spelers": {}})
     basis = basis_inpassen(history)
+    for tag in history.setdefault("eerst", {}):  # Iedereen die ooit in een oorlog van ons stond.
+        history["spelers"].setdefault(tag, {})
 
     clans = load_clans()
     if not clans:
