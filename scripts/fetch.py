@@ -1,0 +1,406 @@
+#!/usr/bin/env python3
+"""Haalt de clandata op uit de Clash of Clans API en schrijft docs/data/*.
+
+Vereist de omgevingsvariabele COC_API_KEY. De sleutel wordt nooit gelogd of
+weggeschreven. Geen externe pakketten nodig.
+"""
+import json
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / "docs" / "data"
+WARS = DATA / "wars"
+CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf8"))
+BASE = os.environ.get("COC_API_BASE", "https://cocproxy.royaleapi.dev/v1").rstrip("/")
+NOW = datetime.now(timezone.utc)
+
+PETS = {
+    "L.A.S.S.I", "Electro Owl", "Mighty Yak", "Unicorn", "Frosty", "Diggy",
+    "Poison Lizard", "Phoenix", "Spirit Fox", "Angry Jelly", "Sneezy",
+    "Greedy Raven",
+}
+ROLES = {"leader": "Leader", "coLeader": "Co-leader", "admin": "Elder", "member": "Member"}
+
+
+class ApiError(Exception):
+    def __init__(self, status, reason):
+        super().__init__(f"HTTP {status}: {reason}")
+        self.status, self.reason = status, reason
+
+
+class Private(Exception):
+    """De clan deelt deze gegevens niet (oorlogslog staat op privé)."""
+
+
+def get(path):
+    """GET op de API. Geeft None bij 404."""
+    request = urllib.request.Request(
+        BASE + path,
+        headers={"Authorization": "Bearer " + os.environ["COC_API_KEY"], "Accept": "application/json"},
+    )
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            try:
+                reason = json.load(error).get("reason", "")
+            except Exception:
+                reason = ""
+            if error.code == 404:
+                return None
+            if error.code == 403 and "invalidIp" in reason:
+                raise ApiError(403, "IP niet toegestaan: stel de sleutel in op het IP van de proxy") from None
+            if error.code == 403 and "invalid" in reason.lower():
+                raise ApiError(403, "sleutel ongeldig") from None
+            if error.code == 403:
+                raise Private() from None
+            if error.code not in (429, 500, 502, 503, 504) or attempt == 3:
+                raise ApiError(error.code, reason) from None
+        except (urllib.error.URLError, TimeoutError) as error:
+            if attempt == 3:
+                raise ApiError(0, type(error).__name__) from None
+        time.sleep(2 ** attempt)
+
+
+def tag_url(tag):
+    return urllib.parse.quote(tag, safe="")
+
+
+def read_json(path, default):
+    return json.loads(path.read_text(encoding="utf8")) if path.exists() else default
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":")), encoding="utf8")
+    temporary.replace(path)
+
+
+def parse_time(value):
+    return datetime.strptime(value, "%Y%m%dT%H%M%S.%fZ").replace(tzinfo=timezone.utc) if value else None
+
+
+def league_of(player):
+    """Naam en volgnummer van de league. Volgnummer dient alleen om te sorteren."""
+    tier = player.get("leagueTier") or player.get("league") or {}
+    name = tier.get("name") or "Onbekend"
+    match = re.search(r"(\d+)$", name)
+    if match:
+        return name, int(match.group(1))
+    number = tier.get("id")
+    return name, number % 1000 if isinstance(number, int) else 0
+
+
+def summarize_player(raw):
+    home = lambda items: [x for x in items if x.get("village", "home") == "home"]
+    league, league_number = league_of(raw)
+    clan = raw.get("clan") or {}
+    return {
+        "tag": raw["tag"],
+        "naam": raw["name"],
+        "th": raw.get("townHallLevel"),
+        "league": league,
+        "lgn": league_number,
+        "helden": sum(x["level"] for x in home(raw.get("heroes", []))),
+        "dieren": sum(x["level"] for x in home(raw.get("troops", [])) if x["name"] in PETS),
+        "equip": sum(x["level"] for x in home(raw.get("heroEquipment", []))),
+        "rol": ROLES.get(raw.get("role"), raw.get("role") or ""),
+        "clan": clan.get("name"),
+        "clanTag": clan.get("tag"),
+        "don": raw.get("donations", 0),
+        "donOntv": raw.get("donationsReceived", 0),
+        "warSterren": raw.get("warStars", 0),
+    }
+
+
+def discover_clans(baseline):
+    """Vindt de clans via vaste tags en via de clan van bekende spelers."""
+    prefix = CONFIG["clan_naam_begint_met"].lower()
+    tags = list(CONFIG["clan_tags"])
+    if not CONFIG.get("alleen_vaste_clans"):
+        for player in baseline["players"]:
+            raw = get("/players/" + tag_url(player["tag"]))
+            clan = (raw or {}).get("clan")
+            if clan and clan["tag"] not in tags and clan["name"].lower().startswith(prefix):
+                tags.append(clan["tag"])
+    clans = []
+    for tag in tags:
+        raw = get("/clans/" + tag_url(tag))
+        if raw and raw["name"].lower().startswith(prefix):
+            clans.append(raw)
+    return clans
+
+
+def normalize_war(raw, war_id, kind, clan_tag, season=None):
+    side, opponent = raw["clan"], raw["opponent"]
+    if side.get("tag") != clan_tag:
+        side, opponent = opponent, side
+    members = [
+        {
+            "tag": m["tag"],
+            "naam": m["name"],
+            "th": m.get("townhallLevel"),
+            "pos": m.get("mapPosition"),
+            "aanvallen": [
+                {"sterren": a["stars"], "procent": a["destructionPercentage"], "doel": a["defenderTag"], "volgorde": a.get("order")}
+                for a in m.get("attacks", [])
+            ],
+        }
+        for m in side.get("members", [])
+    ]
+    return {
+        "id": war_id,
+        "soort": kind,
+        "seizoen": season,
+        "status": raw["state"],
+        "grootte": raw.get("teamSize"),
+        "aanvallenPerLid": raw.get("attacksPerMember", 1),
+        "start": raw.get("startTime"),
+        "einde": raw.get("endTime"),
+        "clan": {k: side.get(k) for k in ("tag", "name", "stars", "destructionPercentage")},
+        "tegenstander": {k: opponent.get(k) for k in ("tag", "name", "stars", "destructionPercentage")},
+        "leden": members,
+    }
+
+
+def save_war(war):
+    write_json(WARS / (war["id"] + ".json"), war)
+
+
+def collect_wars(clan):
+    """Bewaart de lopende oorlog en de CWL-oorlogen. Geeft een statusregel terug."""
+    tag, name = clan["tag"], clan["name"]
+    status = {"oorlogslog": "openbaar", "cwl": None}
+    safe_tag = tag.strip("#")
+    try:
+        war = get(f"/clans/{tag_url(tag)}/currentwar")
+        if war and war.get("state") in ("preparation", "inWar", "warEnded") and war.get("preparationStartTime"):
+            save_war(normalize_war(war, f"{safe_tag}-{war['preparationStartTime'][:13]}", "oorlog", tag))
+    except Private:
+        status["oorlogslog"] = "privé"
+
+    try:
+        group = get(f"/clans/{tag_url(tag)}/currentwar/leaguegroup")
+    except Private:
+        group = None
+    if not group or group.get("state") == "notInWar":
+        return status
+    status["cwl"] = {"seizoen": group.get("season"), "status": group.get("state")}
+    for number, round_ in enumerate(group.get("rounds", []), 1):
+        for war_tag in round_.get("warTags", []):
+            if war_tag == "#0":
+                continue
+            file_id = f"cwl-{safe_tag}-{war_tag.strip('#')}"
+            stored = read_json(WARS / (file_id + ".json"), None)
+            if stored and stored["status"] == "warEnded":
+                break
+            war = get("/clanwarleagues/wars/" + tag_url(war_tag))
+            if war and tag in (war["clan"].get("tag"), war["opponent"].get("tag")):
+                normalized = normalize_war(war, file_id, "cwl", tag, group.get("season"))
+                normalized["ronde"] = number
+                save_war(normalized)
+                break
+    return status
+
+
+def load_wars():
+    return sorted(
+        (json.loads(p.read_text(encoding="utf8")) for p in WARS.glob("*.json")),
+        key=lambda w: w.get("start") or "",
+    )
+
+
+def war_is_final(war):
+    if war["status"] == "warEnded":
+        return True
+    end = parse_time(war.get("einde"))
+    return False if not end else end < NOW - timedelta(hours=1)
+
+
+def own_stats(wars):
+    """Eigen telling per speler over het ingestelde venster."""
+    cutoff = NOW - timedelta(days=CONFIG["venster_dagen"])
+    stats = {}
+    for war in wars:
+        start = parse_time(war.get("start"))
+        if war["status"] == "preparation" or not start or start < cutoff:
+            continue
+        for member in war["leden"]:
+            s = stats.setdefault(member["tag"], {"aanv": 0, "sterren": 0, "drie": 0, "gemis": 0, "oorlogen": 0, "cwlOorlogen": 0, "laatste": None})
+            s["oorlogen"] += 1
+            s["cwlOorlogen"] += war["soort"] == "cwl"
+            s["aanv"] += len(member["aanvallen"])
+            s["sterren"] += sum(a["sterren"] for a in member["aanvallen"])
+            s["drie"] += sum(a["sterren"] == 3 for a in member["aanvallen"])
+            s["laatste"] = max(s["laatste"] or "", war["start"][:8])
+            # Gemist telt alleen als de oorlog zeker is afgelopen en volledig is gezien.
+            if war["status"] == "warEnded":
+                s["gemis"] += max(0, war["aanvallenPerLid"] - len(member["aanvallen"]))
+    for s in stats.values():
+        s["gem"] = round(s["sterren"] / s["aanv"], 2) if s["aanv"] else None
+        s["drieProcent"] = round(100 * s["drie"] / s["aanv"], 1) if s["aanv"] else None
+        s["laatste"] = f"{s['laatste'][:4]}-{s['laatste'][4:6]}-{s['laatste'][6:]}" if s["laatste"] else None
+    return stats
+
+
+def war_summary(war):
+    members = war["leden"]
+    per_member = war["aanvallenPerLid"]
+    return {
+        "id": war["id"],
+        "soort": war["soort"],
+        "ronde": war.get("ronde"),
+        "status": "onvolledig" if war["status"] != "warEnded" and war_is_final(war) else war["status"],
+        "start": war.get("start"),
+        "einde": war.get("einde"),
+        "grootte": war.get("grootte"),
+        "clan": war["clan"],
+        "tegenstander": war["tegenstander"],
+        "gebruikt": sum(len(m["aanvallen"]) for m in members),
+        "totaal": len(members) * per_member,
+        "open": [
+            {"naam": m["naam"], "over": per_member - len(m["aanvallen"])}
+            for m in members if len(m["aanvallen"]) < per_member
+        ],
+    }
+
+
+def api_check(players_by_tag, baseline, clans, raw_sample):
+    """Vergelijkt de API-optelling met de laatste ClashSpot-export."""
+    fields = {"helden": [], "dieren": [], "equip": []}
+    for old in baseline["players"]:
+        new = players_by_tag.get(old["tag"])
+        if new:
+            for field, differences in fields.items():
+                differences.append((abs(new[field] - old[field]), old["naam"], old[field], new[field]))
+    summary = {}
+    for field, differences in fields.items():
+        differences.sort(key=lambda x: -x[0])
+        summary[field] = {
+            "vergeleken": len(differences),
+            "gelijk": sum(d[0] == 0 for d in differences),
+            "grootste": [{"naam": d[1], "clashspot": d[2], "api": d[3]} for d in differences[:5] if d[0]],
+        }
+    return {
+        "getest": NOW.isoformat(timespec="seconds"),
+        "bron": BASE,
+        "clans": [{"tag": c["tag"], "naam": c["name"], "leden": c.get("members")} for c in clans],
+        "spelervelden": sorted(k for k in raw_sample if k in ("league", "leagueTier", "heroes", "heroEquipment", "troops", "role", "clan")),
+        "vergelijking": summary,
+    }
+
+
+def main():
+    if not os.environ.get("COC_API_KEY"):
+        sys.exit("COC_API_KEY ontbreekt")
+    baseline = read_json(DATA / "baseline.json", None)
+    history = read_json(DATA / "history.json", None)
+    if not baseline or not history:
+        sys.exit("baseline.json of history.json ontbreekt")
+
+    clans = discover_clans(baseline)
+    if not clans:
+        sys.exit("Geen clans gevonden. Vul clan_tags in config.json in.")
+
+    tags = [m["tag"] for clan in clans for m in clan.get("memberList", [])]
+    tags += [p["tag"] for p in baseline["players"]]
+    tags = list(dict.fromkeys(tags))
+
+    previous = {p["tag"]: p for p in read_json(DATA / "latest.json", {}).get("players", [])}
+    players, failed, raw_sample = {}, [], {}
+    for tag in tags:
+        try:
+            raw = get("/players/" + tag_url(tag))
+        except ApiError as error:
+            if error.status == 403:
+                raise
+            raw = None
+            failed.append(tag)
+        if raw:
+            raw_sample = raw_sample or raw
+            players[tag] = summarize_player(raw)
+        elif tag in previous:
+            players[tag] = {**previous[tag], "verouderd": True}
+        time.sleep(0.05)
+    if len(failed) > max(3, len(tags) * 0.2):
+        sys.exit(f"Te veel mislukte spelers ({len(failed)}/{len(tags)}). Data niet bijgewerkt.")
+
+    clan_status = []
+    for clan in clans:
+        status = collect_wars(clan)
+        wars_tag = clan["tag"]
+        clan_status.append({
+            "tag": wars_tag, "naam": clan["name"], "niveau": clan.get("clanLevel"),
+            "leden": clan.get("members"), "warLeague": (clan.get("warLeague") or {}).get("name"),
+            "winst": clan.get("warWins"), "serie": clan.get("warWinStreak"), **status,
+        })
+
+    wars = load_wars()
+    stats = own_stats(wars)
+    month = NOW.strftime("%Y-%m")
+    if month not in history["maanden"]:
+        history["maanden"].append(month)
+        history["maanden"].sort()
+    labels = history["maanden"]
+    earlier = labels[labels.index(month) - 1] if labels.index(month) else None
+
+    clan_tags = {c["tag"] for c in clans}
+    baseline_by_tag = {p["tag"]: p for p in baseline["players"]}
+    output = []
+    for tag, player in players.items():
+        series = history["spelers"].setdefault(tag, {})
+        current = [player["helden"], player["dieren"], player["equip"], player["lgn"]]
+        if not player.get("verouderd"):
+            series[month] = current
+        before = series.get(earlier)
+        player = dict(player)
+        player["inClan"] = player.get("clanTag") in clan_tags
+        player["d"] = (
+            {"h": current[0] - before[0], "p": current[1] - before[1], "e": current[2] - before[2],
+             "l": current[3] - before[3] if len(before) > 3 else None}
+            if before else None
+        )
+        player["s"] = [series.get(m, [None] * 3)[:3] if m in series else None for m in labels]
+        player["cw"] = stats.get(tag)
+        old = baseline_by_tag.get(tag)
+        player["cs"] = {k: old.get(k) for k in ("aanv", "gem", "drie", "gemis", "laatste")} if old else None
+        output.append(player)
+
+    first_war = parse_time(wars[0]["start"]) if wars else None
+    window_full = bool(first_war and first_war <= NOW - timedelta(days=CONFIG["venster_dagen"]))
+    summaries = [war_summary(w) for w in reversed(wars)][:60]
+
+    write_json(DATA / "history.json", history)
+    write_json(DATA / "latest.json", {
+        "bijgewerkt": NOW.isoformat(timespec="seconds"),
+        "maanden": labels,
+        "vensterDagen": CONFIG["venster_dagen"],
+        "vensterVol": window_full,
+        "exportLabel": baseline["label"],
+        "eersteOorlog": wars[0]["start"][:8] if wars else None,
+        "grensAanvallen": CONFIG["grens_aanvallen"],
+        "clans": clan_status,
+        "players": output,
+        "oorlogen": summaries,
+    })
+    write_json(DATA / "api_check.json", api_check(players, baseline, clans, raw_sample))
+    print(f"{len(clans)} clans, {len(output)} spelers, {len(wars)} oorlogen bewaard, {len(failed)} mislukt")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Private:
+        sys.exit("API-fout: de sleutel is geweigerd. Controleer de sleutel en het IP-adres.")
+    except ApiError as error:
+        sys.exit(f"API-fout: {error}")
