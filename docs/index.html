@@ -326,9 +326,9 @@ async function ververs(){if(!liveUrl||document.hidden||!D)return;
 function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="fresh" id="versheid">${versheid()}</p></div>
  <div class="front">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(kolom).join("")}</div>`}
 
-// Promotie en degradatie per league, volgens de tabel op de Clash of Clans Wiki.
+// Promotie volgens de Clash of Clans Wiki; degradatie 2 volgens ClashSpot en de praktijk van de clan.
 function plekken(l){l=(l||"").replace(" League","");if(l.startsWith("Bronze"))return [3,0];if(l==="Silver III")return [2,0];
- if(l==="Silver II"||l==="Silver I"||l==="Crystal III"||l==="Crystal II")return [2,1];if(l==="Champion I")return [0,1];return [1,1]}
+ if(l==="Silver II"||l==="Silver I"||l==="Crystal III"||l==="Crystal II")return [2,2];if(l==="Champion I")return [0,2];return [1,2]}
 function overzichtView(){const c=[...D.clans].filter(x=>x.cwl?.stand?.length).sort((a,b)=>(a.nr||0)-(b.nr||0));if(!c.length)return"";
  const rond=[1,2,3,4,5,6,7],getal=v=>Math.round(v||0).toLocaleString("nl-NL");
  return `<section class="sectie"><h2>CWL-tussenstand</h2>${c.map(k=>{const[op,neer]=plekken(k.warLeague),n=k.cwl.stand.length;
