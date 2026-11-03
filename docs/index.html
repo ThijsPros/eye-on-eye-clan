@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Eye on Eye Clan</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self' https://api.github.com; img-src data: https://api-assets.clashofclans.com; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self' https://api.github.com https://*.workers.dev; img-src data: https://api-assets.clashofclans.com; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#12337A">
 <link rel="preload" href="fonts/lilita-one-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -236,7 +236,7 @@ const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice
 const klok=d=>d.toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
-let D,rondeKeuze={},openLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
+let D,liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
 const clanVan=t=>D.clans.find(c=>c.tag===t);
 function schild(nr,maat=40){const c=nr?D?.clans.find(x=>x.nr===nr):null;
  if(c?.logo)return `<img class="logo" src="${esc(c.logo)}" width="${maat}" height="${maat}" alt="${esc(c.naam)}" loading="lazy">`;
@@ -275,7 +275,7 @@ function timerBlok(w){const e=tijd(w.einde),st=tijd(w.start);
 function sterRij(a){const n=a?.sterren??0,k=!a?"leeg":n===3?"s3":n===2?"s2":n===1?"s1":"leeg";return `<span class="aanval"><span class="st ${k}" role="img" aria-label="${a?`${n} sterren, ${a.procent}%`:"Nog niet aangevallen"}">${"★".repeat(n)}${"☆".repeat(3-n)}</span><small>${a?`${a.procent}%`:""}</small></span>`}
 function ledenLijst(c,w){const per=w.perLid||1,leden=w.leden||[],nog=leden.filter(m=>m.aanvallen.length<per).length;
  const tekst=w.status==="inWar"?(nog?`${nog} van ${leden.length} moeten nog aanvallen`:"Iedereen heeft aangevallen"):w.status==="preparation"?`Opstelling (${leden.length} spelers)`:"Aanvallen per speler";
- return `<details class="open" data-lijst="${esc(c.tag)}"${openLijst.has(c.tag)?" open":""}><summary>${tekst}</summary><ol class="leden">${leden.map((m,i)=>{const klaar=m.aanvallen.length>=per,rijen=[];for(let j=0;j<per;j++)rijen.push(sterRij(m.aanvallen[j]));
+ return `<details class="open" data-lijst="${esc(c.tag)}"${dichteLijst.has(c.tag)?"":" open"}><summary>${tekst}</summary><ol class="leden">${leden.map((m,i)=>{const klaar=m.aanvallen.length>=per,rijen=[];for(let j=0;j<per;j++)rijen.push(sterRij(m.aanvallen[j]));
   return `<li><span class="rang ${w.status==="preparation"?"":klaar?"ja":"nee"}">${i+1}</span><span class="sn">${esc(m.naam)}</span><span class="ats">${rijen.join("")}</span></li>`}).join("")}</ol></details>`}
 function rondeKnoppen(c,rondes,keuze){let r="";for(let i=1;i<=7;i++){const w=rondes[i],o=w&&w.status==="warEnded"?oordeel(w)[0]:"",k=!w?"":w.status==="inWar"?"bezig":w.status==="preparation"?"voor":o;
  const uitleg=!w?"nog niet bekend":w.status==="inWar"?"bezig":w.status==="preparation"?"voorbereiding":w.status==="warEnded"?(o==="win"?"gewonnen":"verloren"):"einde niet gezien";
@@ -290,7 +290,28 @@ function kolom(c){const eigen=D.oorlogen.filter(w=>w.clan.tag===c.tag);let w,kno
  else w=eigen.find(x=>x.status==="inWar")||eigen.find(x=>x.status==="preparation")||eigen.find(x=>x.status==="warEnded"&&Date.now()-tijd(x.einde)<864e5);
  if(!w)return `<article class="kol">${kop}<p class="rust">Geen oorlog bezig.</p></article>`;
  return `<article class="kol">${kop}${knoppen}<div class="tegen">${tegenLogo(w,26)}<div><b>tegen ${esc(w.tegenstander.name)}</b><span>${esc(soortNaam(w))}</span></div></div>${w.status==="preparation"?"":scoreBlok(w)}${timerBlok(w)}${w.leden?ledenLijst(c,w):""}</article>`}
-function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="fresh">Bijgewerkt ${klok(new Date(D.bijgewerkt))}</p></div>
+function versheid(){return liveTijd?`Live, opgehaald ${liveTijd.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}`:liveUit?`Live niet bereikbaar. Stand van ${klok(new Date(D.bijgewerkt))}`:`Bijgewerkt ${klok(new Date(D.bijgewerkt))}`}
+function maxSterren(sterren,over,aanvallen,grootte){const b={};aanvallen.forEach(a=>b[a.doel]=Math.max(b[a.doel]||0,a.sterren));
+ const rest=[...Object.values(b).map(v=>3-v),...Array(Math.max(0,grootte-Object.keys(b).length)).fill(3)].sort((x,y)=>y-x);
+ return sterren+rest.slice(0,over).reduce((x,y)=>x+y,0)}
+const gemDuur=l=>{const d=l.map(a=>a.duration).filter(v=>v!=null);return d.length?Math.round(d.reduce((x,y)=>x+y,0)/d.length):null};
+function verwerkLive(w,raw){if(raw.endTime!==w.einde||!raw.state)return;
+ const ons=raw.clan.tag===w.clan.tag?raw.clan:raw.opponent,zij=ons===raw.clan?raw.opponent:raw.clan,per=raw.attacksPerMember||w.perLid||1,grootte=raw.teamSize||w.grootte;
+ const leden=[...(ons.members||[])].sort((a,b)=>(a.mapPosition||99)-(b.mapPosition||99)),mijn=leden.flatMap(m=>m.attacks||[]),hun=(zij.members||[]).flatMap(m=>m.attacks||[]);
+ const kaart=l=>l.map(a=>({doel:a.defenderTag,sterren:a.stars}));
+ Object.assign(w.clan,{stars:ons.stars,destructionPercentage:ons.destructionPercentage,aanvallen:ons.attacks??mijn.length});
+ Object.assign(w.tegenstander,{stars:zij.stars,destructionPercentage:zij.destructionPercentage,aanvallen:zij.attacks??hun.length});
+ Object.assign(w,{status:raw.state,perLid:per,gebruikt:mijn.length,totaal:leden.length*per,gemTijdOns:gemDuur(mijn),gemTijdZij:gemDuur(hun),
+  maxOns:maxSterren(ons.stars||0,Math.max(0,grootte*per-mijn.length),kaart(mijn),grootte),maxZij:maxSterren(zij.stars||0,Math.max(0,grootte*per-hun.length),kaart(hun),grootte),
+  leden:leden.map(m=>({naam:m.name,pos:m.mapPosition,aanvallen:(m.attacks||[]).map(a=>({sterren:a.stars,procent:a.destructionPercentage}))})),
+  open:leden.filter(m=>(m.attacks||[]).length<per).map(m=>({naam:m.name,over:per-(m.attacks||[]).length}))})}
+async function ververs(){if(!liveUrl||document.hidden||!D)return;
+ const doel=D.oorlogen.filter(w=>w.status==="inWar"||(w.status==="preparation"&&tijd(w.start)<=Date.now()));if(!doel.length)return;
+ const uit=await Promise.allSettled(doel.map(async w=>{const pad=w.soort==="cwl"?`oorlog/${w.id.split("-").pop()}`:`clan/${w.clan.tag.slice(1)}`,r=await fetch(`${liveUrl}/${pad}`,{cache:"no-store"});if(!r.ok)throw new Error(r.status);return [w,await r.json()]}));
+ let gelukt=false,veranderd=false;uit.forEach(x=>{if(x.status!=="fulfilled")return;gelukt=true;const[w,raw]=x.value,oud=JSON.stringify(w);verwerkLive(w,raw);if(JSON.stringify(w)!==oud)veranderd=true});
+ liveTijd=gelukt?new Date:null;liveUit=!gelukt;
+ if(tab==="overzicht"){if(veranderd){const v=document.querySelector(".front")?.scrollLeft;$("muur").innerHTML=muur();const f=document.querySelector(".front");if(f)f.scrollLeft=v}else if($("versheid"))$("versheid").textContent=versheid()}}
+function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="fresh" id="versheid">${versheid()}</p></div>
  <div class="front">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(kolom).join("")}</div>`}
 
 function overzichtView(){return `<section class="sectie"><h2>Onze clans</h2><div class="clans">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map((c,i)=>{const sp=D.players.filter(p=>p.clanTag===c.tag&&gem(p)!=null);
@@ -402,7 +423,9 @@ addEventListener("click",async e=>{const t=e.target.closest("[data-tab]");if(t){
   if(a==="vergeet"){sleutelZet(null);bewerk=false;gewijzigd=0;opslagMelding="Sleutel verwijderd uit deze browser.";await laadLeiding();render()}
   if(a==="opslaan")opslaan();return}
  const c=e.target.closest("[data-kopieer]");if(c){const oud=c.textContent;const v=$(c.dataset.kopieer);try{await navigator.clipboard.writeText(v.value);c.textContent="Gekopieerd"}catch{v.select();c.textContent="Selecteer de tekst en kopieer zelf"}setTimeout(()=>c.textContent=oud,2200)}});
-addEventListener("toggle",e=>{const d=e.target;if(d.dataset?.lijst){d.open?openLijst.add(d.dataset.lijst):openLijst.delete(d.dataset.lijst)}},true);
+setInterval(ververs,3e4);
+document.addEventListener("visibilitychange",ververs);
+addEventListener("toggle",e=>{const d=e.target;if(d.dataset?.lijst){d.open?dichteLijst.delete(d.dataset.lijst):dichteLijst.add(d.dataset.lijst)}},true);
 setInterval(()=>document.querySelectorAll("[data-tot]").forEach(x=>{x.textContent=resttijd(+x.dataset.tot)}),1e3);
 addEventListener("input",e=>{if(e.target.id==="zoek"){zoek=e.target.value.trim().toLowerCase();tabel()}if(e.target.id==="kzoek"){oorlogZoek=e.target.value.trim().toLowerCase();$("krijen").innerHTML=keuzeRijen()}});
 addEventListener("beforeunload",e=>{if(gewijzigd)e.preventDefault()});
@@ -414,7 +437,7 @@ addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(D&&TABS.som
 
 async function laadLeiding(){try{const r=await fetch("data/leiding.json",{cache:"no-store"});if(r.ok)L=await r.json()}catch{}}
 (async()=>{const h=location.hash.slice(1);if(TABS.some(x=>x[0]===h))tab=h;nav();
- try{const r=await fetch("data/latest.json",{cache:"no-store"});if(!r.ok)throw new Error(r.status);D=await r.json();await laadLeiding();render();
+ try{const r=await fetch("data/latest.json",{cache:"no-store"});if(!r.ok)throw new Error(r.status);D=await r.json();await laadLeiding();render();try{const l=await fetch("data/live.json",{cache:"no-store"});if(l.ok)liveUrl=(await l.json()).url?.replace(/\/$/,"")||null;ververs()}catch{}
   if((Date.now()-new Date(D.bijgewerkt))/36e5>12)$("inhoud").insertAdjacentHTML("afterbegin",'<p class="melding" style="margin-bottom:18px">Deze gegevens zijn ouder dan 12 uur. Controleer de workflow in GitHub Actions.</p>')}
  catch{$("inhoud").innerHTML='<p class="melding">De clandata kon niet worden geladen. Vernieuw de pagina om het opnieuw te proberen.</p>'}})();
 </script>

@@ -1,0 +1,37 @@
+name: Live-koppeling installeren
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Koppeling plaatsen bij Cloudflare
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          secrets: COC_API_KEY
+        env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+      - name: Adres op de site zetten
+        env:
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          test -n "$URL"
+          printf '{"url":"%s"}\n' "$URL" > docs/data/live.json
+          git config user.name "eye-on-eye-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/live.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Adres live-koppeling bijwerken"
+          git pull --rebase
+          git push

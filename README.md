@@ -16,6 +16,13 @@ overstap of vertrek.
 De sleutel staat als GitHub-secret `COC_API_KEY` en hoort op IP `45.79.218.79`
 van de RoyaleAPI-proxy te staan.
 
+## Live-koppeling
+
+De map `worker/` is een Cloudflare Worker die de site elke 30 seconden actuele
+oorlogsdata geeft. De API-sleutel blijft daarbij afgeschermd. Installeren gaat met
+de workflow `Live-koppeling installeren`, die de secrets `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID` en `COC_API_KEY` nodig heeft.
+
 ## Instellingen
 
 In `config.json`:
