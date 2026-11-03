@@ -445,6 +445,7 @@ function oordeel(w){const a=w.clan.stars||0,b=w.tegenstander.stars||0;
  if(w.status==="warEnded"){const x=w.clan.destructionPercentage,y=w.tegenstander.destructionPercentage;if(a>b||(a===b&&x>y))return ["win","Gewonnen"];if(a<b||(a===b&&x<y))return ["ver","Verloren"];return ["open","Gelijkspel"]}
  if(w.maxZij==null)return null;
  if(w.totaal&&w.clan.aanvallen>=w.totaal&&w.tegenstander.aanvallen>=w.totaal){const x=w.clan.destructionPercentage,y=w.tegenstander.destructionPercentage;if(a>b||(a===b&&x>y))return ["win","Winst is binnen"];if(a<b||(a===b&&x<y))return ["ver","Verloren"];return ["open","Gelijkspel"]}
+ if(w.totaal&&w.clan.aanvallen>=w.totaal&&(a<b||(a===b&&w.clan.destructionPercentage<w.tegenstander.destructionPercentage)))return ["ver","Verloren"];
  if(a>w.maxZij)return ["win","Winst is binnen"];
  if(w.maxOns<b)return ["ver","Niet meer te winnen"];
  return ["open","Nog niet beslist"]}
