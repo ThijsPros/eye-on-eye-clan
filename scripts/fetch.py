@@ -722,7 +722,9 @@ def main():
         if move and move.get("vorige"):
             player["vorigeClan"], player["overstap"] = move["vorige"], move["sinds"]
         player["d"] = (
-            {"h": current[0] - before[0], "p": current[1] - before[1], "e": current[2] - before[2],
+            {"h": current[0] - before[0] if before[0] is not None else 0,
+             "p": current[1] - before[1] if before[1] is not None else 0,
+             "e": current[2] - before[2] if before[2] is not None else 0,
              "l": current[3] - before[3] if len(before) > 3 and current[3] and before[3] else None}
             if before else None
         )

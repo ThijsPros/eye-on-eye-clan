@@ -78,7 +78,7 @@ def league_nummer(naam):
 
 
 def niveaus(rij, overslaan=()):
-    return {k: heel(v) for k, v in rij.items() if k not in GEEN_LEVEL and k not in overslaan and heel(v)}
+    return {k: heel(v) for k, v in rij.items() if k not in GEEN_LEVEL and k not in overslaan and not str(k).startswith("Som") and heel(v)}
 
 
 def lees(pad, clan, uit):
