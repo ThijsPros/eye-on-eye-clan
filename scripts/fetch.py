@@ -499,7 +499,10 @@ def main():
             # CWL-regels hebben geen tegenstander-tag en tellen niet mee voor de reeksen.
             if entry.get("result") in ("win", "lose", "tie") and (entry.get("opponent") or {}).get("tag"):
                 results[entry["endTime"]] = {"win": "w", "lose": "v", "tie": "g"}[entry["result"]]
-        status["ongeslagen"] = unbeaten_streak(results)
+        # Binnen de log staat alles wat telt; wat er alleen bij ClashKing staat, is een vriendschappelijke oorlog.
+        official = {e["endTime"] for e in log.get("items", [])}
+        counted = {end: value for end, value in results.items() if end < cutoff or end in official}
+        status["ongeslagen"] = unbeaten_streak(counted)
     month = NOW.strftime("%Y-%m")
     if month not in history["maanden"]:
         history["maanden"].append(month)
