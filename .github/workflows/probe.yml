@@ -1,0 +1,23 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 - <<'P'
+          import json,urllib.request,urllib.error
+          def g(u):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan"})
+              try:
+                  x=urllib.request.urlopen(r,timeout=30);return x.status,x.read()
+              except urllib.error.HTTPError as e:
+                  return e.code,b""
+              except Exception as e:
+                  return str(e)[:60],b""
+          s,b=g("https://api.clashk.ing/openapi.json");print("OPENAPI",s,len(b))
+          if b:
+              d=json.loads(b);print("PATHS",[p for p in d["paths"] if any(w in p for w in("join","clan/{","/clan","leave","history","stats","war/"))][:80])
+          for u in ["https://api.clashk.ing/clan/%23PYQ2RLCQ/join-leave?limit=3","https://api.clashk.ing/clan/%23PYQ2RLCQ/historical?limit=1","https://www.clashofstats.com/robots.txt","https://api.clashofstats.com/clans/PYQ2RLCQ/past-members","https://clashspot.net/robots.txt"]:
+              s,b=g(u);print("EP",u,s,b[:300])
+          P
