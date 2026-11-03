@@ -398,9 +398,11 @@ def archive_add(tag, wars):
         ours, theirs = (war["clan"], war["opponent"]) if war["clan"].get("tag") == tag else (war["opponent"], war["clan"])
         league = bool(war.get("tag")) or not war.get("attacksPerMember")
         number = None
-        if league:
-            month = war["startTime"][:6]
-            months[month] = number = months.get(month, 0) + 1
+        if league:  # Twee CWL's in één maand: na een pauze begint de telling opnieuw.
+            start = parse_time(war["startTime"].replace("-", "")) if "." in war["startTime"] else None
+            nieuw = not months.get("start") or not start or (start - months["start"]).days >= 3
+            months["start"], months["nummer"] = start, 1 if nieuw else months["nummer"] + 1
+            number = months["nummer"]
         per_member = 1 if league else war.get("attacksPerMember") or 2
         rows[war["endTime"]] = {
             "soort": "cwl" if league else "oorlog", "ronde": number, "start": war["startTime"], "einde": war["endTime"],
