@@ -246,13 +246,6 @@ def to_date(value):
     return f"{value[:4]}-{value[4:6]}-{value[6:8]}"
 
 
-def war_result(ours, theirs):
-    """w, v of g (gelijk). Bij gelijke sterren beslist het percentage."""
-    a = (ours.get("stars") or 0, ours.get("destructionPercentage") or 0)
-    b = (theirs.get("stars") or 0, theirs.get("destructionPercentage") or 0)
-    return "w" if a > b else "v" if a < b else "g"
-
-
 def unbeaten_streak(results):
     """Aantal normale oorlogen op rij zonder verlies, nieuwste eerst."""
     count = 0
@@ -287,11 +280,6 @@ def backfill(clans, history):
                 for member in side.get("members", []):
                     first[member["tag"]] = min(first.get(member["tag"], date), date)
         wars = [w for w in wars if w.get("state") == "warEnded" and w.get("startTime")]
-        results = history.setdefault("uitslagen", {}).setdefault(tag, {})
-        for war in wars:
-            if not war.get("tag"):
-                ours, theirs = (war["clan"], war["opponent"]) if war["clan"].get("tag") == tag else (war["opponent"], war["clan"])
-                results[war["endTime"]] = war_result(ours, theirs)
         rounds = {}
         for war in sorted((w for w in wars if w.get("tag")), key=lambda w: w["startTime"]):
             month = war["startTime"][:6]
@@ -486,9 +474,14 @@ def main():
     stats = own_stats(wars)
     for status in clan_status:
         results = history.setdefault("uitslagen", {}).setdefault(status["tag"], {})
-        for war in wars:
-            if war["soort"] == "oorlog" and war["status"] == "warEnded" and war["clan"].get("tag") == status["tag"]:
-                results[war["einde"]] = war_result(war["clan"], war["tegenstander"])
+        try:
+            log = get(f"/clans/{tag_url(status['tag'])}/warlog?limit=200") or {}
+        except Private:
+            log = {}
+        for entry in log.get("items", []):
+            # CWL-regels hebben geen uitslag en tellen niet mee voor de reeksen.
+            if entry.get("result") in ("win", "lose", "tie"):
+                results[entry["endTime"]] = {"win": "w", "lose": "v", "tie": "g"}[entry["result"]]
         status["ongeslagen"] = unbeaten_streak(results)
     month = NOW.strftime("%Y-%m")
     if month not in history["maanden"]:
