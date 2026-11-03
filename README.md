@@ -21,7 +21,8 @@ van de RoyaleAPI-proxy te staan.
 De map `worker/` is een Cloudflare Worker die de site elke 30 seconden actuele
 oorlogsdata geeft. De API-sleutel blijft daarbij afgeschermd. Installeren gaat met
 de workflow `Live-koppeling installeren`, die de secrets `CLOUDFLARE_API_TOKEN`,
-`CLOUDFLARE_ACCOUNT_ID` en `COC_API_KEY` nodig heeft.
+`CLOUDFLARE_ACCOUNT_ID`, `COC_API_KEY` en `GH_DISPATCH_TOKEN` nodig heeft. De Worker start
+ook elk uur de ophaalronde.
 
 ## Geschiedenis
 

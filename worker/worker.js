@@ -76,6 +76,23 @@ function upstreamPath(pathname) {
 }
 
 export default {
+  // Start elk uur de ophaalronde in GitHub; de planning van GitHub zelf is onbetrouwbaar.
+  async scheduled(event, env) {
+    const response = await fetch(
+      "https://api.github.com/repos/ThijsPros/eye-on-eye-clan/actions/workflows/update.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + env.GH_DISPATCH_TOKEN,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "eye-on-eye-clan",
+        },
+        body: JSON.stringify({ ref: "main" }),
+      },
+    );
+    if (!response.ok) throw new Error("Ophaalronde niet gestart: " + response.status);
+  },
+
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: headers({ "Access-Control-Allow-Methods": "GET" }) });
     if (request.method !== "GET") return new Response("{}", { status: 405, headers: headers() });

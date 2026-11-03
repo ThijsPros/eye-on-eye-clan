@@ -19,9 +19,12 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
-          secrets: COC_API_KEY
+          secrets: |
+            COC_API_KEY
+            GH_DISPATCH_TOKEN
         env:
           COC_API_KEY: ${{ secrets.COC_API_KEY }}
+          GH_DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
       - name: Adres op de site zetten
         env:
           URL: ${{ steps.deploy.outputs.deployment-url }}
