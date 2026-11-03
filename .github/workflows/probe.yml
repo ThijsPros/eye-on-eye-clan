@@ -1,0 +1,40 @@
+name: Bronnen onderzoeken
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - run: |
+          python3 - <<'P'
+          import json,urllib.request,urllib.parse,time,itertools
+          q=lambda t:urllib.parse.quote(t,safe='')
+          def g(u):
+              for i in range(2):
+                  try: return json.load(urllib.request.urlopen(urllib.request.Request('https://api.clashk.ing'+u,headers={'User-Agent':'eye-on-eye'}),timeout=100))
+                  except Exception as e: err=e
+              print('ERR',u,err)
+          sets=[]
+          for c,ss in [('#PYQ2RLCQ',['2026-10-02','2026-09-01','2026-08-02']),('#2RGYGLVC0',['2026-10-02','2026-09-01'])]:
+              for se in ss:
+                  r=g(f'/cwl/{q(c)}/{se}')
+                  if not r or not r.get('rounds'): continue
+                  tags=sorted({x['tag'] for x in r['clans']});ix={t:i for i,t in enumerate(tags)}
+                  R=[]
+                  for rd in r['rounds']:
+                      R.append(frozenset(frozenset((ix[w['clan']['tag']],ix[w['opponent']['tag']])) for w in rd['warTags'] if isinstance(w,dict)))
+                  print('GROEP',c,se,len(tags),[len(x) for x in R],[sorted(sorted(p) for p in x) for x in R[:2]]);sets.append((c,se,R))
+                  time.sleep(.5)
+          base=sets[0][2]
+          for c,se,R in sets[1:]:
+              hits=0;pred=0
+              for perm in itertools.permutations(range(8)):
+                  m=lambda rr:frozenset(frozenset(perm[i] for i in p) for p in rr)
+                  if m(base[0])==R[0] and m(base[1])==R[1]:
+                      pred+=1
+                      if all(m(base[i])==R[i] for i in range(2,7)): hits+=1
+              print('TEST',c,se,'kandidaten',pred,'volledig gelijk',hits)
+          P
