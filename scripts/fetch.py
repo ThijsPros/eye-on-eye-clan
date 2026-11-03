@@ -68,7 +68,7 @@ def get(path):
                 raise ApiError(403, "sleutel ongeldig") from None
             if error.code == 403:
                 raise Private() from None
-            if error.code not in (429, 500, 502, 503, 504) or attempt == 3:
+            if not (error.code == 429 or error.code >= 500) or attempt == 3:
                 raise ApiError(error.code, reason) from None
         except (urllib.error.URLError, TimeoutError) as error:
             if attempt == 3:
@@ -439,9 +439,13 @@ def backfill(clans, history):
     ours = {clan["tag"] for clan in clans}
     done = history.setdefault("inUitGehad", [])
     exact = history.setdefault("eerstExact", {})
+    begin = time.monotonic()
     for tag in history["spelers"]:
         if tag in done:
             continue
+        if time.monotonic() - begin > 120:
+            complete = False  # De rest volgt in de volgende ronde.
+            break
         events = clashking(f"/player/{tag_url(tag)}/join-leave?limit=1000")
         if events is None:
             complete = False
