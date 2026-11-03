@@ -736,7 +736,14 @@ def main():
                 "s": [entry["clan"].get("stars") or 0, opponent.get("stars") or 0],
                 "p": [entry["clan"].get("destructionPercentage") or 0, opponent.get("destructionPercentage") or 0],
             }
-        archive[tag] = sorted(rows.values(), key=lambda r: r["einde"], reverse=True)
+        ordered = sorted(rows.values(), key=lambda r: r["einde"], reverse=True)
+        unique = []
+        for row in ordered:
+            # Dezelfde oorlog kan in beide bronnen een iets andere eindtijd hebben.
+            if unique and unique[-1]["tegen"] == row["tegen"] and unique[-1]["soort"] == row["soort"] and unique[-1]["einde"][:8] == row["einde"][:8]:
+                continue
+            unique.append(row)
+        archive[tag] = unique
     write_json(DATA / "archief.json", archive)
     write_json(DATA / "latest.json", {
         "bijgewerkt": NOW.isoformat(timespec="seconds"),
