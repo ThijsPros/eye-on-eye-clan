@@ -318,8 +318,9 @@ function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="f
 const overzichtView=()=>"";
 
 // Binnen 30 dagen na de eerste bekende oorlog is de echte datum onbekend: die speler zat er al.
-function sindsTekst(p){if(!p.sinds)return"–";if(p.sindsVast)return /^\d{4}$/.test(p.sinds)?p.sinds:datum(p.sinds);
- const b=new Date(D.sindsBegin);if((new Date(p.sinds)-b)/864e5<=30)return `Vóór ${MND[b.getUTCMonth()]} ${b.getUTCFullYear()}`;return (p.sindsExact?"":"ca. ")+datum(p.sinds)}
+const maand=s=>{const[y,m]=s.split("-");return `${MND[m-1]} ${y}`};
+function sindsTekst(p){if(!p.sinds)return"–";if(p.sindsVast)return /^\d{4}$/.test(p.sinds)?p.sinds:maand(p.sinds);
+ const b=new Date(D.sindsBegin);if((new Date(p.sinds)-b)/864e5<=30)return `Vóór ${MND[b.getUTCMonth()]} ${b.getUTCFullYear()}`;return (p.sindsExact?"":"ca. ")+maand(p.sinds)}
 function delta(v){return v==null?'<span class="d">–</span>':v===0?'<span class="d">±0</span>':`<span class="d ${v>0?"up":"down"}">${v>0?"+":""}${v}</span>`}
 function spark(p,i,label){const pts=p.s.map((x,j)=>x?[j,x[i]]:null).filter(q=>q&&q[1]!=null);if(pts.length<2)return"";
  const vs=pts.map(q=>q[1]),a=Math.min(...vs),b=Math.max(...vs),n=p.s.length-1,X=j=>3+j*134/n,Y=v=>34-(v-a)/(b-a||1)*30,l=pts[pts.length-1];
