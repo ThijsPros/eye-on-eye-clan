@@ -493,7 +493,7 @@ function zichtbaar(){const l=D.players.filter(p=>{
  if(zoek&&!p.naam.toLowerCase().includes(zoek))return false;
  if(thFilter&&String(p.th)!==thFilter)return false;
  if(clanFilter==="uit")return !p.inClan;if(clanFilter&&p.clanTag!==clanFilter)return false;
- if(filter==="laag")return laag(p);if(filter==="hoog")return (p.cw?.moest??0)>=D.grensAanvallen;if(filter==="gemist")return (p.cw?.gemis||0)>0;return true});
+ if(filter==="laag")return laag(p);if(filter==="hoog")return (p.cw?.moest??0)>=D.grensAanvallen;return true});
  const e=v=>v==null||v==="";
  return [...l].sort((a,b)=>{const x=waarde(a,sort.k),y=waarde(b,sort.k);if(e(x)&&e(y))return 0;if(e(x))return 1;if(e(y))return -1;return (typeof x==="string"?x.localeCompare(y,"nl"):x-y)*sort.dir})}
 function rijen(){return zichtbaar().map(p=>{const c0=cijfers(p),d=p.d||{},m=c0.moest??0,mis=c0.gemis??0,i=encodeURIComponent(p.tag),c=p.inClan?clanVan(p.clanTag):null;
@@ -507,7 +507,7 @@ function spelersView(){return `<section class="sectie"><h2>Alle leden</h2>
  <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Tik op een naam voor het profiel.</p>
  <div class="tools"><input id="zoek" type="search" placeholder="Zoek lid" aria-label="Zoek lid" value="${esc(zoek)}">
  </div><div class="chips">${chip("cf","","Alle clans",clanFilter)}${[...D.clans].sort((a,b)=>a.nr-b.nr).map(c=>chip("cf",c.tag,c.naam,clanFilter,c)).join("")}${D.players.some(p=>!p.inClan)?chip("cf","uit","Buiten onze clans",clanFilter):""}</div><div class="chips">${chip("ls","","CW en CWL",lidSoort)}${chip("ls","oorlog","CW",lidSoort)}${chip("ls","cwl","CWL",lidSoort)}</div><div class="tools">
- <select id="thf" aria-label="Filter op TH"><option value="">Alle TH</option>${[...new Set(D.players.map(p=>p.th).filter(Boolean))].sort((a,b)=>b-a).map(t=>`<option value="${t}"${thFilter===String(t)?" selected":""}>TH ${t}</option>`).join("")}</select><select id="filter" aria-label="Filter spelers"><option value="">Alle leden</option><option value="hoog"${filter==="hoog"?" selected":""}>${D.grensAanvallen} of meer aanvallen</option><option value="laag"${filter==="laag"?" selected":""}>Onder ${D.grensAanvallen} aanvallen</option><option value="gemist"${filter==="gemist"?" selected":""}>Met gemiste aanvallen</option></select>
+ <select id="thf" aria-label="Filter op TH"><option value="">Alle TH</option>${[...new Set(D.players.map(p=>p.th).filter(Boolean))].sort((a,b)=>b-a).map(t=>`<option value="${t}"${thFilter===String(t)?" selected":""}>TH ${t}</option>`).join("")}</select><select id="filter" aria-label="Filter spelers"><option value="">Alle leden</option><option value="hoog"${filter==="hoog"?" selected":""}>${D.grensAanvallen} of meer aanvallen</option><option value="laag"${filter==="laag"?" selected":""}>Onder ${D.grensAanvallen} aanvallen</option></select>
  <span class="teller" id="teller"></span></div>
  <div class="tablebox"><table><thead><tr id="kop">${kop()}</tr></thead><tbody id="rijen">${rijen()}</tbody></table></div></section>`}
 
