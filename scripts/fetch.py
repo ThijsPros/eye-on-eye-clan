@@ -554,14 +554,15 @@ def basis_inpassen(history):
 
 
 def stand_bijwerken(series, month, earlier, current, stale=False):
-    """De eerste meting van een maand staat vast. De groei is de live stand min vorige maand."""
+    """De eerste meting van een maand staat vast. Geeft de groei sinds die stand en de leaguewissel."""
     if not stale and month not in series:
         series[month] = current
-    before = series.get(earlier)
-    if not before:
-        return None
-    verschil = lambda i: current[i] - before[i] if current[i] is not None and before[i] is not None else None
-    return {"h": verschil(0), "p": verschil(1), "e": verschil(2), "l": verschil(3) if current[3] and before[3] else None}
+    base, before = series.get(month), series.get(earlier)
+    if not base:
+        return None, None
+    verschil = lambda i: current[i] - base[i] if current[i] is not None and base[i] is not None else None
+    growth = {"h": verschil(0), "p": verschil(1), "e": verschil(2), "l": verschil(3) if current[3] and base[3] else None}
+    return growth, base[3] - before[3] if before and base[3] and before[3] else None
 
 
 def maand_record(player, raw, nummer, oorlog, verdediging):
@@ -789,7 +790,7 @@ def main():
     for tag, player in players.items():
         series = history["spelers"].setdefault(tag, {})
         current = [player["helden"], player["dieren"], player["equip"], player["lgn"] or None]
-        growth = stand_bijwerken(series, month, earlier, current, player.get("verouderd"))
+        growth, league_wissel = stand_bijwerken(series, month, earlier, current, player.get("verouderd"))
         player = dict(player)
         player["inClan"] = player.get("clanTag") in clan_tags
         player["sinds"] = history.setdefault("eerst", {}).setdefault(tag, NOW.strftime("%Y-%m-%d"))
@@ -808,6 +809,7 @@ def main():
         if move and move.get("vorige"):
             player["vorigeClan"], player["overstap"] = move["vorige"], move["sinds"]
         player["d"] = growth
+        player["dl"] = league_wissel
         player["s"] = [series.get(m) for m in labels]
         player["cw"] = stats.get(tag)
         output.append(player)
