@@ -545,9 +545,9 @@ def basis_inpassen(history):
             stand = [r.get("helden"), r.get("dieren"), r.get("equip"), r.get("lgn")]
             if any(x is not None for x in stand):
                 series[maand] = stand
-        begin = min(maanden) + "-01"
-        if not exact.get(tag) and begin < eerst.get(tag, "9999"):
-            eerst[tag] = begin
+        lid = [m for m, r in maanden.items() if r.get("lijst")]
+        if lid and not exact.get(tag) and min(lid) + "-01" < eerst.get(tag, "9999"):
+            eerst[tag] = min(lid) + "-01"
     for series in history["spelers"].values():
         for maand, stand in series.items():
             vol = (stand + [None] * 4)[:4]
@@ -564,8 +564,8 @@ def laatst_bijwerken(history, basis, wars, in_clan):
             laatst[tag] = datum
     for tag, maanden in basis.items():
         for maand, r in maanden.items():
-            zet(tag, maand + "-01")
-            zet(tag, r.get("laatsteOorlog"))
+            if r.get("lijst"):  # Alleen als iemand die maand echt op de ledenlijst stond.
+                zet(tag, maand + "-01")
     for war in wars:
         if war["status"] != "preparation" and war.get("start"):
             for member in war["leden"]:

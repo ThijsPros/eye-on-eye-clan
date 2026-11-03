@@ -107,6 +107,7 @@ def lees(pad, clan, uit):
                     s["league"] = r.get("League")
             elif soort == "leden":
                 s.setdefault("naam", r.get("Name"))
+                s["lid"] = True  # Alleen dit blad is de ledenlijst; War bevat ook vertrokken spelers.
                 s["xp"] = heel(r.get("Level"))
                 s["th"] = s.get("th") or heel(r.get("TH"))
                 if maand != "2025-10":
@@ -121,7 +122,6 @@ def lees(pad, clan, uit):
                 s["war"] = {
                     "aanv": heel(r.get("Attack: count")), "gem": getal(r.get("Attack: Average Stars")),
                     "drie": getal(r.get("Attack: % of 3 Stars")), "gemist": heel(r.get("Attack: Miss attacks")),
-                    "laatsteOorlog": str(r["Date last war"])[:10] if r.get("Date last war") else None,
                     "verd": heel(r.get("Defense: count")), "verdGem": getal(r.get("Defense: Average Stars")),
                     "verdDrie": getal(r.get("Defense: % of 3 Stars")),
                 }
@@ -129,7 +129,7 @@ def lees(pad, clan, uit):
 
 def samenvoegen(per_clan):
     """Staat iemand in één maand in beide lijsten, dan telt de lijst met de meeste aanvallen."""
-    volgorde = sorted(per_clan, key=lambda c: ((per_clan[c].get("war") or {}).get("aanv") or 0, c == "I"), reverse=True)
+    volgorde = sorted(per_clan, key=lambda c: (bool(per_clan[c].get("lid")), (per_clan[c].get("war") or {}).get("aanv") or 0, c == "I"), reverse=True)
     r = dict(per_clan[volgorde[0]])
     for c in volgorde[1:]:
         for k, v in per_clan[c].items():
@@ -152,7 +152,7 @@ def main():
         for m in sorted(maanden):
             r = samenvoegen(maanden[m])
             record = {
-                "bron": "excel", "naam": r.get("naam"), "lijst": r["lijst"], "th": r.get("th"), "xp": r.get("xp"),
+                "bron": "excel", "naam": r.get("naam"), "lijst": r["lijst"] if r.get("lid") else None, "th": r.get("th"), "xp": r.get("xp"),
                 "league": r.get("league"), "lgn": league_nummer(r.get("league")),
                 "helden": som_of(r, "helden", "heldenLvl"), "dieren": som_of(r, "dieren", "dierenLvl"), "equip": som_of(r, "equip", "equipLvl"),
                 **(r.get("war") or {}), "heldenLvl": r.get("heldenLvl"), "dierenLvl": r.get("dierenLvl"), "equipLvl": r.get("equipLvl"),
