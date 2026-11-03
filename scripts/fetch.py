@@ -554,14 +554,14 @@ def basis_inpassen(history):
 
 
 def stand_bijwerken(series, month, earlier, current, stale=False):
-    """De eerste meting van een maand staat vast, net als de maandlijsten. Geeft de groei terug."""
+    """De eerste meting van een maand staat vast. De groei is de live stand min vorige maand."""
     if not stale and month not in series:
         series[month] = current
-    now, before = series.get(month), series.get(earlier)
-    if not now or not before:
+    before = series.get(earlier)
+    if not before:
         return None
-    verschil = lambda i: now[i] - before[i] if now[i] is not None and before[i] is not None else None
-    return {"h": verschil(0), "p": verschil(1), "e": verschil(2), "l": verschil(3) if now[3] and before[3] else None}
+    verschil = lambda i: current[i] - before[i] if current[i] is not None and before[i] is not None else None
+    return {"h": verschil(0), "p": verschil(1), "e": verschil(2), "l": verschil(3) if current[3] and before[3] else None}
 
 
 def maand_record(player, raw, nummer, oorlog, verdediging):
