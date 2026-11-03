@@ -1,0 +1,14 @@
+name: Bronnen onderzoeken
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          T: ${{ secrets.GH_DISPATCH_TOKEN }}
+        run: |
+          echo "LENGTE ${#T}"
+          curl -sS -o /dev/null -w "DISPATCH %{http_code}\n" -X POST -H "Authorization: Bearer $T" -H "Accept: application/vnd.github+json" -H "User-Agent: eye-on-eye-clan" https://api.github.com/repos/ThijsPros/eye-on-eye-clan/actions/workflows/update.yml/dispatches -d '{"ref":"main"}'
