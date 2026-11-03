@@ -6,27 +6,19 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - run: |
           python3 - <<'P'
-          import json,urllib.request,urllib.parse,time,itertools
-          def g(u):
+          import json,urllib.request,urllib.parse
+          q=urllib.parse.quote('#PYQ2RLCQ',safe='')
+          def g(u,t):
               try:
-                  return json.load(urllib.request.urlopen(urllib.request.Request('https://api.clashk.ing'+u,headers={'User-Agent':'eye-on-eye'}),timeout=40))
+                  b=urllib.request.urlopen(urllib.request.Request('https://api.clashk.ing'+u,headers={'User-Agent':'eye-on-eye'}),timeout=t).read().decode();print('OK',u,len(b),b[:300]);return json.loads(b)
               except Exception as e:
-                  print('ERR',u,e,str(getattr(e,'read',lambda:b'')()[:150]));return None
-          q=lambda t:urllib.parse.quote(t,safe='')
-          groups=[]
-          for c in ['#PYQ2RLCQ','#2RGYGLVC0','#2JYY0809P']:
-              s=g(f'/v2/cwl/{q(c)}/seasons?limit=8')
-              print('SEIZOENEN',str(s)[:200])
-              items=(s or {}).get('items',s if isinstance(s,list) else []) or []
-              for it in items[:8]:
-                  se=it if isinstance(it,str) else it.get('season')
-                  r=g(f'/v2/cwl/{q(c)}/group?season={se}')
-                  if r:
-                      if not groups: print('VOORBEELD',json.dumps(r)[:900])
-                      groups.append((c,se,r))
-                  time.sleep(.3)
-          print('AANTAL',len(groups))
+                  print('ERR',u,e,str(getattr(e,'read',lambda:b'')()[:150]))
+          for u in [f'/cwl/{q}/2026-10-02',f'/cwl/{q}/group',f'/v2/cwl/{q}/group?season=2026-10-02']:
+              r=g(u,120)
+              if isinstance(r,dict) and r.get('rounds'):
+                  print('RONDES',len(r['rounds']),json.dumps(r['rounds'])[:500])
           P
