@@ -34,6 +34,10 @@ function sideSummary(side, size) {
   for (const a of attacks) best[a.defenderTag] = Math.max(best[a.defenderTag] || 0, a.stars);
   const open = [...Object.values(best).map((v) => 3 - v), ...Array(Math.max(0, size - Object.keys(best).length)).fill(3)].sort((a, b) => b - a);
   const left = Math.max(0, size - attacks.length);
+  const procent = {};
+  for (const a of attacks) procent[a.defenderTag] = Math.max(procent[a.defenderTag] || 0, a.destructionPercentage || 0);
+  const gaten = [...Object.values(procent).map((v) => 100 - v), ...Array(Math.max(0, size - Object.keys(procent).length)).fill(100)].sort((a, b) => b - a);
+  const maxPct = size ? (Object.values(procent).reduce((a, b) => a + b, 0) + gaten.slice(0, left).reduce((a, b) => a + b, 0)) / size : null;
   return {
     tag: side.tag,
     naam: side.name,
@@ -42,6 +46,7 @@ function sideSummary(side, size) {
     procent: side.destructionPercentage || 0,
     aanvallen: side.attacks ?? attacks.length,
     max: (side.stars || 0) + open.slice(0, left).reduce((a, b) => a + b, 0),
+    maxPct,
     verdeling: [3, 2, 1, 0].map((n) => attacks.filter((a) => a.stars === n).length),
   };
 }

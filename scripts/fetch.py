@@ -266,6 +266,7 @@ def collect_wars(clan):
                             "tag": side.get("tag"), "sterren": side.get("stars") or 0, "procent": side.get("destructionPercentage") or 0,
                             "aanvallen": side.get("attacks", sum(len(m.get("attacks", [])) for m in side.get("members", []))),
                             "max": side_maximum(side, war.get("teamSize") or 0),
+                            "maxPct": side_max_percent(side, war.get("teamSize") or 0),
                             "verdeling": [
                                 sum(a["stars"] == stars for m in side.get("members", []) for a in m.get("attacks", []))
                                 for stars in (3, 2, 1, 0)
@@ -286,6 +287,22 @@ def collect_wars(clan):
     return status
 
 
+def max_percent(attacks, attacks_left, size):
+    """Hoogst haalbare vernietiging: resterende aanvallen pakken de grootste winst per basis."""
+    if not size:
+        return None
+    best = {}
+    for attack in attacks:
+        best[attack.get("doel")] = max(best.get(attack.get("doel"), 0), attack.get("procent") or 0)
+    gaps = sorted([100 - v for v in best.values()] + [100] * max(0, size - len(best)), reverse=True)
+    return round((sum(best.values()) + sum(gaps[:attacks_left])) / size, 2)
+
+
+def side_max_percent(side, size):
+    attacks = [{"doel": a["defenderTag"], "procent": a["destructionPercentage"]} for m in side.get("members", []) for a in m.get("attacks", [])]
+    return max_percent(attacks, max(0, size - len(attacks)), size)
+
+
 def side_maximum(side, size):
     """Maximaal haalbare sterren van deze kant in een CWL-oorlog (1 aanval per lid)."""
     attacks = [{"doel": a["defenderTag"], "sterren": a["stars"]} for m in side.get("members", []) for a in m.get("attacks", [])]
@@ -299,9 +316,9 @@ def cwl_outcome(war, own, other):
     mine, theirs = (own["sterren"], own["procent"]), (other["sterren"], other["procent"])
     if finished:
         return "w" if mine > theirs else "v" if mine < theirs else "g"
-    if "max" in other and own["sterren"] > other["max"]:
+    if "max" in other and (own["sterren"] > other["max"] or (own["sterren"] == other["max"] and other.get("maxPct") is not None and own["procent"] > other["maxPct"] + 0.02)):
         return "w"
-    if "max" in own and other["sterren"] > own["max"]:
+    if "max" in own and (other["sterren"] > own["max"] or (other["sterren"] == own["max"] and own.get("maxPct") is not None and other["procent"] > own["maxPct"] + 0.02)):
         return "v"
     return "bezig"
 
@@ -725,7 +742,7 @@ def ranked_bijwerken(players, raws, leden, clan_tags):
             week = str(RANKED_START + (moment - RANKED_START) // RANKED_WEEK * RANKED_WEEK)
             regel = weken.setdefault(week, {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
             soort = "aanv" if b.get("attack") else "verd"
-            regel.setdefault(soort, {})[str(moment)] = [b.get("stars", 0), b.get("destructionPercentage", 0)]
+            regel.setdefault(soort, {})[str(moment)] = [b.get("stars", 0), b.get("destructionPercentage", 0), b.get("opponentTownHallLevel")]
         regel = weken.setdefault(week_nu, {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
         groep = raw.get("currentLeagueGroupTag")
         regel.update(naam=player["naam"], clan=player.get("clanTag"), lgn=player["lgn"] or None, league=player["league"],
@@ -810,6 +827,8 @@ def war_summary(war):
         limits = {
             "maxOns": max_stars(ours["stars"] or 0, max(0, total - len(our_attacks)), our_attacks, size),
             "maxZij": max_stars(theirs["stars"] or 0, max(0, total - len(war["tegenAanvallen"])), war["tegenAanvallen"], size),
+            "maxPctOns": max_percent(our_attacks, max(0, total - len(our_attacks)), size),
+            "maxPctZij": max_percent(war["tegenAanvallen"], max(0, total - len(war["tegenAanvallen"])), size),
         }
     return {
         **limits,
