@@ -21,8 +21,8 @@ def eerder(pad):
 
 
 def vorm(v):
-    vol = (v + [None] * 4)[:4]
-    return vol[:3] + [vol[3] or None]
+    vol = (v + [None] * 6)[:6]
+    return vol[:3] + [vol[3] or None] + vol[4:]
 
 
 def main():
@@ -39,7 +39,7 @@ def main():
         fouten.append("latest.json en history.json hebben andere maanden.")
     for tag, reeks in spelers.items():
         for m, v in reeks.items():
-            if m not in maanden or len(v) != 4 or not all(x is None or isinstance(x, int) for x in v):
+            if m not in maanden or len(v) != 6 or not all(x is None or isinstance(x, int) for x in v):
                 fouten.append(f"Ongeldige maandstand {tag} {m}: {v}")
             elif v[3] is not None and not 1 <= v[3] <= 36:
                 fouten.append(f"Ongeldige league {tag} {m}: {v[3]}")
@@ -49,7 +49,7 @@ def main():
         detail = lees(pad) if pad.exists() else {}
         for m, r in reeks.items():
             stand = [r.get("helden"), r.get("dieren"), r.get("equip"), r.get("lgn")]
-            if any(x is not None for x in stand) and spelers.get(tag, {}).get(m) != stand:
+            if any(x is not None for x in stand) and spelers.get(tag, {}).get(m, [])[:4] != stand:
                 fouten.append(f"Maandstand wijkt af van de basis: {tag} {m}")
             if detail.get(m) != r:
                 fouten.append(f"Maanddetail wijkt af van de basis: {tag} {m}")
@@ -62,8 +62,12 @@ def main():
                 continue
             if m not in spelers.get(tag, {}):
                 fouten.append(f"Maand verdwenen: {tag} {m}")
-            elif spelers[tag][m] != vorm(v):
+            elif any(o is not None and o != n for o, n in zip(vorm(v), spelers[tag][m])):
                 fouten.append(f"Vaste maand gewijzigd: {tag} {m}")
+
+    roof, roof_oud = lees(DATA / "roof.json"), eerder("docs/data/roof.json")
+    if set((roof_oud or {}).get("weekenden", {})) - set(roof["weekenden"]):
+        fouten.append("Er zijn roofweekenden verdwenen.")
 
     for p in latest["players"]:
         if len(p["s"]) != len(maanden):

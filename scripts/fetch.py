@@ -26,6 +26,7 @@ BASE = os.environ.get("COC_API_BASE", "https://cocproxy.royaleapi.dev/v1").rstri
 NOW = datetime.now(timezone.utc)
 CLASHKING = "https://api.clashk.ing"
 ROMEINS = {1: "I", 2: "II", 3: "III", 4: "IV"}
+SUPER = {"Sneaky Goblin", "Inferno Dragon", "Ice Hound", "Rocket Balloon"}
 
 PETS = {
     "L.A.S.S.I", "Electro Owl", "Mighty Yak", "Unicorn", "Frosty", "Diggy",
@@ -106,6 +107,11 @@ def league_of(player):
     return name, number % 1000 if isinstance(number, int) else 0
 
 
+def is_troep(x):
+    """Gewone thuistroep: geen dier, geen tijdelijke supertroep."""
+    return x["name"] not in PETS and x["name"] not in SUPER and not x["name"].startswith("Super ")
+
+
 def summarize_player(raw):
     home = lambda items: [x for x in items if x.get("village", "home") == "home"]
     league, league_number = league_of(raw)
@@ -119,6 +125,8 @@ def summarize_player(raw):
         "helden": sum(x["level"] for x in home(raw.get("heroes", []))),
         "dieren": sum(x["level"] for x in home(raw.get("troops", [])) if x["name"] in PETS),
         "equip": sum(x["level"] for x in home(raw.get("heroEquipment", []))),
+        "spreuken": sum(x["level"] for x in home(raw.get("spells", []))),
+        "troepen": sum(x["level"] for x in home(raw.get("troops", [])) if is_troep(x)),
         "rol": ROLES.get(raw.get("role"), raw.get("role") or ""),
         "clan": clan.get("name"),
         "clanTag": clan.get("tag"),
@@ -549,14 +557,14 @@ def basis_inpassen(history):
         for maand, r in maanden.items():
             stand = [r.get("helden"), r.get("dieren"), r.get("equip"), r.get("lgn")]
             if any(x is not None for x in stand):
-                series[maand] = stand
+                series[maand] = stand + (series.get(maand) or [None] * 6)[4:6]
         lid = [m for m, r in maanden.items() if r.get("lijst")]
         if lid and not exact.get(tag) and min(lid) + "-01" < eerst.get(tag, "9999"):
             eerst[tag] = min(lid) + "-01"
     for series in history["spelers"].values():
         for maand, stand in series.items():
-            vol = (stand + [None] * 4)[:4]
-            series[maand] = vol[:3] + [vol[3] or None]
+            vol = (stand + [None] * 6)[:6]
+            series[maand] = vol[:3] + [vol[3] or None] + vol[4:]
     history["maanden"] = sorted({*history["maanden"], *basis["maanden"]})
     return basis["spelers"]
 
@@ -579,6 +587,35 @@ def laatst_bijwerken(history, basis, wars, in_clan):
         zet(tag, NOW.strftime("%Y-%m-%d"))
 
 
+def roof_bijwerken(clans):
+    """Roofweekenden per clan. Oude weekenden blijven staan, ook als de API ze niet meer geeft."""
+    pad = DATA / "roof.json"
+    opslag = read_json(pad, {"weekenden": {}})
+    weekenden = opslag["weekenden"]
+    for clan in clans:
+        tag = clan["tag"]
+        bekend = any(k.startswith(tag + "|") for k in weekenden)
+        try:
+            data = get(f"/clans/{tag_url(tag)}/capitalraidseasons?limit={8 if bekend else 100}") or {}
+        except ApiError:
+            continue
+        for w in data.get("items", []):
+            sleutel = f"{tag}|{w['startTime']}"
+            oud = weekenden.get(sleutel, {})
+            rooster = set(oud.get("rooster") or [])
+            if w.get("state") == "ongoing":
+                rooster |= {m["tag"] for m in clan.get("memberList", [])}
+            weekenden[sleutel] = {
+                "clan": tag, "start": w["startTime"], "einde": w.get("endTime"), "status": w.get("state"),
+                "buit": w.get("capitalTotalLoot"), "raids": w.get("raidsCompleted"), "aanvallen": w.get("totalAttacks"),
+                "wijken": w.get("enemyDistrictsDestroyed"), "beloning": w.get("offensiveReward"), "verdediging": w.get("defensiveReward"),
+                "leden": [{"tag": m["tag"], "naam": m["name"], "aanv": m.get("attacks", 0), "limiet": m.get("attackLimit", 0),
+                           "bonus": m.get("bonusAttackLimit", 0), "buit": m.get("capitalResourcesLooted", 0)} for m in w.get("members", [])],
+                "rooster": sorted(rooster) or None,
+            }
+    write_json(pad, opslag)
+
+
 def stand_bijwerken(series, month, earlier, current, stale=False):
     """De eerste meting van een maand staat vast. Geeft de groei sinds die stand en de leaguewissel."""
     if not stale and month not in series:
@@ -586,8 +623,13 @@ def stand_bijwerken(series, month, earlier, current, stale=False):
     base, before = series.get(month), series.get(earlier)
     if not base:
         return None, None
+    if not stale:  # Spreuken en troepen kwamen later; de eerste meting vult ze aan.
+        for i in (4, 5):
+            if base[i] is None:
+                base[i] = current[i]
     verschil = lambda i: current[i] - base[i] if current[i] is not None and base[i] is not None else None
-    growth = {"h": verschil(0), "p": verschil(1), "e": verschil(2), "l": verschil(3) if current[3] and base[3] else None}
+    growth = {"h": verschil(0), "p": verschil(1), "e": verschil(2), "s": verschil(4), "t": verschil(5),
+              "l": verschil(3) if current[3] and base[3] else None}
     return growth, base[3] - before[3] if before and base[3] and before[3] else None
 
 
@@ -601,12 +643,15 @@ def maand_record(player, raw, nummer, oorlog, verdediging):
         "bron": "live", "naam": player["naam"], "lijst": ROMEINS.get(nummer), "th": player["th"], "xp": raw.get("expLevel"),
         "league": player["league"], "lgn": player["lgn"] or None,
         "helden": player["helden"], "dieren": player["dieren"], "equip": player["equip"],
+        "spreuken": player.get("spreuken"), "troepen": player.get("troepen"),
         "aanv": oorlog.get("aanv"), "gem": oorlog.get("gem"), "drie": oorlog.get("drieProcent"), "gemist": oorlog.get("gemis"),
         "verd": aantal, "verdGem": round(verdediging["sterren"] / aantal, 2) if aantal else None,
         "verdDrie": round(100 * verdediging["drie"] / aantal, 2) if aantal else None,
         "heldenLvl": {k: v for k, v in home(raw.get("heroes", [])).items() if k not in ("Battle Machine", "Battle Copter")},
         "dierenLvl": {k: v for k, v in troepen.items() if k in PETS},
         "equipLvl": home(raw.get("heroEquipment", [])),
+        "spreukLvl": home(raw.get("spells", [])),
+        "troepLvl": {k: v for k, v in troepen.items() if is_troep({"name": k})},
     }
     return {k: v for k, v in record.items() if v not in (None, {})}
 
@@ -712,6 +757,8 @@ def player_profile(tag, raw, wars, stats):
         "donaties": raw.get("donations"), "ontvangen": raw.get("donationsReceived"), "kapitaal": raw.get("clanCapitalContributions"),
         "helden": pack(home(raw.get("heroes", []))),
         "dieren": pack([x for x in home(raw.get("troops", [])) if x["name"] in PETS]),
+        "spreuken": pack(home(raw.get("spells", []))),
+        "troepen": pack([x for x in home(raw.get("troops", [])) if is_troep(x)]),
         "equipment": pack(sorted(home(raw.get("heroEquipment", [])), key=lambda x: -x["level"])),
         "aanvallen": attacks, "gemist": missed, "perSoort": kinds, "verdediging": defence,
         "beurten": stats.get(tag),
@@ -818,7 +865,7 @@ def main():
     output = []
     for tag, player in players.items():
         series = history["spelers"].setdefault(tag, {})
-        current = [player["helden"], player["dieren"], player["equip"], player["lgn"] or None]
+        current = [player["helden"], player["dieren"], player["equip"], player["lgn"] or None, player.get("spreuken"), player.get("troepen")]
         growth, league_wissel = stand_bijwerken(series, month, earlier, current, player.get("verouderd"))
         player = dict(player)
         player["inClan"] = player.get("clanTag") in clan_tags
@@ -849,6 +896,7 @@ def main():
     summaries = [war_summary(w) for w in reversed(wars)][:200]
 
     write_json(DATA / "history.json", history)
+    roof_bijwerken(clans)
     maand_dagen = CONFIG["maand_venster_dagen"]
     maand_oorlog, maand_verdediging = own_stats(wars, maand_dagen), defence_stats(wars, maand_dagen)
     clan_nummers = {c["tag"]: c["nr"] for c in clan_status}
