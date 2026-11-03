@@ -390,8 +390,12 @@ table{font-variant-numeric:tabular-nums}
 .vakmeet{display:flex;flex-wrap:wrap;gap:2px 14px;margin:0 0 8px;font-size:13px;color:var(--muted)}
 .vakmeet b{color:var(--ink)}
 .bakbox .vlag{white-space:nowrap}
-@media (min-width:1420px){.ledenbox{overflow:visible}.ledenbox th{position:sticky;top:0;z-index:3;background:#16306B}}
-@media (min-width:721px) and (max-width:1419px){.ledenbox .kort{display:inline}.ledenbox .lang{display:none}}
+@media (min-width:1280px){.ledenbox{overflow:visible}.ledenbox th{position:sticky;top:0;z-index:3;background:#16306B}}
+.ledenbox .kort{display:inline}.ledenbox .lang{display:none}
+@media (min-width:721px){.ledenbox td,.ledenbox th{white-space:nowrap}.ledenbox .d{display:inline;margin-left:5px}}
+.eisen{display:inline-flex;gap:4px}
+.eis{padding:1px 6px;border-radius:5px;font-size:12px;font-weight:700;color:#fff;background:#C2332B}
+.eisok{color:var(--good);font-weight:700}
 @media (max-width:1040px){.kolomspring{display:flex;flex-wrap:nowrap;overflow-x:auto}.kolomspring .chip{flex:none}}
 @media (min-width:721px) and (max-width:1120px){.top{flex-wrap:wrap}.nav{flex-wrap:wrap}.nav button{font-size:16px;padding:9px 11px}}
 @media (max-width:720px){
@@ -449,7 +453,7 @@ const gem=p=>p.cw?.gem??null;
 const laag=p=>D.vensterVol&&(p.cw?.moest??0)<D.grensAanvallen;
 const pid=p=>p.tag.slice(1), K=p=>L.spelers[pid(p)]||{};
 const plekNaam=n=>{if(n==null)return"";const v=VAKKEN.find(x=>n>=x.van&&n<=x.tot);return v?`Clan ${ROMEINS[v.nr]}, plek ${n-v.van+1}`:""};
-const COLS=[["naam","Speler"],["sinds","Lid sinds",0,1],["th","TH",1,1],["lgn","League"],["helden","Helden",1,1],["dieren","Dieren",1,1],["equip","Equipment",1,1],["spreuken","Spreuken",1,1],["troepen","Troepen",1,1],["moest","Aanvallen",1,0,"Aanv."],["gedaan","Aanvallen gedaan",1,1],["gemis","Aanvallen gemist",1,0,"Gemist"],["gem","Gem ★",1],["eis","Eisen",0,1]];
+const COLS=[["naam","Speler"],["sinds","Lid sinds",0,1],["th","TH",1,1],["lgn","League"],["helden","Helden",1,1],["dieren","Dieren",1,1],["equip","Equipment",1,1],["spreuken","Spreuken",1,1],["troepen","Troepen",1,1],["moest","Aanvallen",1,0,"Aanv."],["gedaan","Aanvallen gedaan",1,1,"Gedaan"],["gemis","Aanvallen gemist",1,0,"Gemist"],["gem","Gem ★",1],["eis","Eisen",0,1]];
 const cijfers=p=>{if(!lidSoort)return p.cw||{};const k=p.cw?.soorten?.[lidSoort]||{};return {...k,gem:k.aanv?k.sterren/k.aanv:null}};
 const waarde=(p,k)=>{const c=cijfers(p);if(k==="eis")return eisTekort(p).length;return k==="moest"?(c.moest??0):k==="gem"?(c.gem??null):k==="gemis"?(c.gemis??0):k==="gedaan"?(c.aanv??0):p[k]};
 
@@ -627,7 +631,7 @@ function zichtbaar(){const l=D.players.filter(p=>{
  const e=v=>v==null||v==="";
  return [...l].sort((a,b)=>{const k=sort.k==="sinds"&&clanFilter==="uit"?"laatst":sort.k,x=waarde(a,k),y=waarde(b,k);if(e(x)&&e(y))return 0;if(e(x))return 1;if(e(y))return -1;return (typeof x==="string"?x.localeCompare(y,"nl"):x-y)*sort.dir})}
 function eisTekort(p){const e=p.inClan?clanVan(p.clanTag)?.eisen:null,uit=[];if(!e)return uit;if(e.th&&(p.th||0)<e.th)uit.push(`TH ${e.th}`);if(e.lgn&&(p.lgn||0)<e.lgn)uit.push(e.league);return uit}
-function eisCel(p){if(!p.inClan)return"–";const t=eisTekort(p);return t.length?`<span class="tal bad" title="Voldoet niet aan: ${esc(t.join(", "))}">${esc(t.join(", "))}</span>`:'<span class="d up" title="Voldoet aan de eisen">✓</span>'}
+function eisCel(p){if(!p.inClan)return"–";const t=eisTekort(p);return t.length?`<span class="eisen" title="Haalt niet: ${esc(t.join(", "))}">${t.map(x=>`<span class="eis">${/^TH/.test(x)?"TH":"League"}</span>`).join("")}</span>`:'<span class="eisok" title="Voldoet aan de eisen">✓</span>'}
 function eisRegel(){const l=[...D.clans].sort((a,b)=>a.nr-b.nr).filter(c=>!clanFilter||clanFilter===c.tag),t=e=>[e.th>1?`TH ${e.th}`:"",e.league||""].filter(Boolean).join(", ")||"geen";return `<p class="uitleg">Toelatingseisen: ${l.map(c=>`${esc(c.naam)}: ${esc(t(c.eisen||{}))}`).join(". ")}. Elk lid wordt vergeleken met de eisen van zijn eigen clan. De trofeeëneis telt niet mee, omdat trofeeën sinds ranked steeds opnieuw beginnen.</p>`}
 function rijen(){return zichtbaar().map(p=>{const c0=cijfers(p),d=p.d||{},m=c0.moest??0,mis=c0.gemis??0,i=encodeURIComponent(p.tag),c=p.inClan?clanVan(p.clanTag):null;
  return `<tr><td><div class="speler">${schild(c?.nr,20)}<button class="naam" data-speler="${p.tag.slice(1)}">${esc(p.naam)}</button>${p.inClan?"":'<span class="vlag oud">Oud-lid</span>'}</div></td>
