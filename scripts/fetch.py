@@ -680,6 +680,23 @@ def games_bijwerken(players, clan_tags):
     write_json(pad, opslag)
 
 
+def catalogus_bijwerken(raws):
+    """Alles wat in het spel bestaat met het hoogste level, zodat ontbrekende items als 0 tellen."""
+    pad = DATA / "catalogus.json"
+    cat = read_json(pad, {"helden": {}, "dieren": {}, "equipment": {}, "spreuken": {}, "troepen": {}})
+    def zet(soort, items):
+        for x in items:
+            if x.get("village", "home") == "home":
+                cat[soort][x["name"]] = max(cat[soort].get(x["name"], 0), x.get("maxLevel") or 0)
+    for raw in raws.values():
+        zet("helden", raw.get("heroes", []))
+        zet("equipment", raw.get("heroEquipment", []))
+        zet("spreuken", raw.get("spells", []))
+        zet("dieren", [x for x in raw.get("troops", []) if x["name"] in PETS])
+        zet("troepen", [x for x in raw.get("troops", []) if is_troep(x)])
+    write_json(pad, cat)
+
+
 def stand_bijwerken(series, month, earlier, current, stale=False):
     """De eerste meting van een maand staat vast. Geeft de groei sinds die stand en de leaguewissel."""
     if not stale and month not in series:
@@ -967,6 +984,7 @@ def main():
 
     write_json(DATA / "history.json", history)
     roof_bijwerken(clans)
+    catalogus_bijwerken(raws)
     games_bijwerken(players, clan_tags)
     maand_dagen = CONFIG["maand_venster_dagen"]
     maand_oorlog, maand_verdediging = own_stats(wars, maand_dagen), defence_stats(wars, maand_dagen)
