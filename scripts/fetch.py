@@ -217,6 +217,11 @@ def collect_wars(clan):
         return status
     status["cwl"] = {"seizoen": group.get("season"), "status": group.get("state")}
     results = {}
+    status["cwl"]["clans"] = [
+        {"tag": c["tag"], "naam": c["name"], "logo": (c.get("badgeUrls") or {}).get("medium")}
+        for c in group.get("clans", [])
+    ]
+    status["cwl"]["rondes"] = {}
     for number, round_ in enumerate(group.get("rounds", []), 1):
         for war_tag in round_.get("warTags", []):
             if war_tag == "#0":
@@ -248,6 +253,7 @@ def collect_wars(clan):
                     normalized = normalize_war(war, f"cwl-{safe_tag}-{file_id}", "cwl", tag, group.get("season"))
                     normalized["ronde"] = number
                     save_war(normalized)
+            status["cwl"]["rondes"].setdefault(str(number), {})[file_id] = cached
             if cached["status"] != "preparation":
                 results.setdefault(number, []).append(cached)
     status["cwl"]["stand"] = cwl_table(group, results)

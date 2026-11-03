@@ -1,0 +1,22 @@
+name: Bronnen onderzoeken
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'P'
+          import json,urllib.request,time
+          d=json.load(open('docs/data/latest.json'));B=json.load(open('docs/data/live.json'))['url']
+          cl=[c for c in d['clans'] if (c.get('cwl') or {}).get('rondes')]
+          tags=sorted({t for c in cl for r in c['cwl']['rondes'].values() for t,w in r.items() if w['status']!='warEnded'})
+          u=f"{B}/cwl?tags={','.join(tags)}&groepen={','.join(c['tag'][1:] for c in cl)}"
+          for i in (1,2):
+              t=time.time();r=urllib.request.urlopen(urllib.request.Request(u,headers={'Origin':'https://thijspros.github.io','User-Agent':'test'}),timeout=60);b=r.read();j=json.loads(b)
+              print('LIVE',r.status,len(tags),len(j['oorlogen']),len(b),round(time.time()-t,2),{k:[len(x) for x in v] for k,v in j['groepen'].items()})
+          print('LIVE',[(w['status'],w['kanten'][0]['naam'][:10],w['kanten'][0]['sterren'],w['kanten'][0]['max'],w['kanten'][1]['sterren'],w['kanten'][1]['max']) for w in list(j['oorlogen'].values())[:5]])
+          P
