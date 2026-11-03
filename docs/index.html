@@ -444,7 +444,7 @@ async function opslaan(){opslagMelding="Opslaan…";render();try{const tekst=JSO
 
 function oorlogenView(){const w=D.oorlogen.filter(x=>(x.status==="warEnded"||x.status==="onvolledig")&&(!oorlogClan||x.clan.tag===oorlogClan)).sort((a,b)=>(b.einde||"").localeCompare(a.einde||""));
  const keuze=`<div class="tools"><select id="oorlogclan" aria-label="Filter op clan"><option value="">Alle clans</option>${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(c=>`<option value="${esc(c.tag)}"${oorlogClan===c.tag?" selected":""}>${esc(c.naam)}</option>`).join("")}</select><span class="teller">${w.length} oorlogen</span></div>`;
- if(!w.length)return '<section class="sectie"><h2>Uitslagen</h2>${keuze}<p class="uitleg">Geen afgelopen oorlogen gevonden. Lopende oorlogen staan op de statuspagina.</p></section>';
+ if(!w.length)return `<section class="sectie"><h2>Uitslagen</h2>${keuze}<p class="uitleg">Geen afgelopen oorlogen gevonden. Lopende oorlogen staan op de statuspagina.</p></section>`;
  return `<section class="sectie"><h2>Uitslagen</h2>${keuze}<div class="lijst">${w.map(x=>{const c=clanVan(x.clan.tag),a=x.clan.stars??0,b=x.tegenstander.stars??0,heel=x.status==="warEnded",o=heel?oordeel(x):null,kl=o?.[0]==="win"?"win":o?.[0]==="ver"?"ver":"";
   return `<article class="uitslag">${schild(c?.nr,32)}<div class="wie"><b>tegen ${esc(x.tegenstander.name)}</b><span>${x.soort==="cwl"?`CWL ronde ${x.ronde??"?"}`:"Clanoorlog"}, ${datum(iso(x.start))}</span></div>
   <div class="sc ${kl}">${a} – ${b}<small>${o?o[1]:"Einde niet gezien"}, ${x.gebruikt}/${x.totaal}</small></div></article>`}).join("")}</div></section>`}
