@@ -283,7 +283,9 @@ function rondeKnoppen(c,rondes,keuze){let r="";for(let i=1;i<=7;i++){const w=ron
  r+=`<button class="${k}" data-kclan="${esc(c.tag)}" data-ronde="${i}"${w?"":" disabled"} aria-label="Ronde ${i}, ${uitleg}" title="Ronde ${i}: ${uitleg}"${i===keuze?' aria-current="true"':""}>${i}</button>`}
  return `<div class="rondes">${r}</div>`}
 function kolom(c){const eigen=D.oorlogen.filter(w=>w.clan.tag===c.tag);let w,knoppen="";
- const kop=`<div class="kolkop">${schild(c.nr,56)}<h3>${esc(c.naam)}</h3></div>${c.oorlogslog==="privé"?'<p class="waarschuwing">Oorlogslog staat op privé. Zet die op openbaar om oorlogen te bewaren.</p>':""}`;
+ const inCwl=eigen.some(x=>x.soort==="cwl"&&c.cwl&&x.seizoen===c.cwl.seizoen);
+ const onder=inCwl?`<p>${esc((c.warLeague??"Geen league").replace(" League",""))}</p>`:`<p>Winreeks: ${c.serie??0}</p><p>Ongeslagen reeks: ${c.ongeslagen??0}</p>`;
+ const kop=`<div class="kolkop">${schild(c.nr,56)}<div><h3>${esc(c.naam)}</h3>${onder}</div></div>${c.oorlogslog==="privé"?'<p class="waarschuwing">Oorlogslog staat op privé. Zet die op openbaar om oorlogen te bewaren.</p>':""}`;
  const cwl=c.cwl?eigen.filter(x=>x.soort==="cwl"&&x.seizoen===c.cwl.seizoen):[];
  if(cwl.length){const rondes={};cwl.forEach(x=>rondes[x.ronde]=x);
   const nu=cwl.find(x=>x.status==="inWar")||cwl.find(x=>x.status==="preparation")||cwl.reduce((a,b)=>b.ronde>a.ronde?b:a);
