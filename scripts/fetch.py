@@ -497,6 +497,15 @@ def backfill(clans, history):
     for clan in clans:
         leden_uit_historie(clan["tag"], clashking(f"/clan/{tag_url(clan['tag'])}/join-leave?limit=50000"), first, laatst)
 
+    leagues = history.setdefault("cwlLeague", {})
+    for clan in clans:
+        for member in clan.get("memberList", [])[:5]:  # De league per seizoen staat alleen bij spelers.
+            for item in clashking(f"/v2/player/{tag_url(member['tag'])}/cwl/history") or []:
+                eigen = item.get("clan") or {}
+                naam = (eigen.get("warLeague") or {}).get("name")
+                if naam and item.get("season") and eigen.get("tag") in {c["tag"] for c in clans}:
+                    leagues.setdefault(eigen["tag"], {})[item["season"][:7]] = naam.replace(" League", "")
+
     ours = {clan["tag"] for clan in clans}
     done = history.setdefault("inUitGehad", [])
     exact = history.setdefault("eerstExact", {})
@@ -1091,6 +1100,7 @@ def main():
         "eersteOorlog": wars[0]["start"][:8] if wars else None,
         "grensAanvallen": CONFIG["grens_aanvallen"],
         "gamesDoel": CONFIG["clangames_doel"],
+        "cwlLeague": history.get("cwlLeague", {}),
         "rankedLimiet": CONFIG["ranked_limieten"],
         "rankedVrij": CONFIG["ranked_veilige_weken"],
         "clans": clan_status,
