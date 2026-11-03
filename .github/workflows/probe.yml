@@ -1,0 +1,22 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 - <<'P'
+          import json,urllib.request,urllib.error,collections
+          def g(u,t=60):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan"})
+              try:
+                  x=urllib.request.urlopen(r,timeout=t);return x.status,json.load(x)
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read()[:200]
+              except Exception as e:
+                  return str(e)[:60],None
+          C="https://api.clashk.ing"
+          for t in ["QUYLU8C0","80YULR99P"]:
+              s,d=g(C+f"/v2/player/%23{t}/cwl/history");i=d.get("items",[]) if isinstance(d,dict) else [];print("H",t,s,len(i),[(x["season"][:7],x["clan"]["tag"],(x["clan"].get("warLeague") or {}).get("name")) for x in i][:40])
+          s,d=g(C+"/v2/cwl/%23PYQ2RLCQ/ranking-history",170);print("RH",s,json.dumps(d)[:900] if isinstance(d,(dict,list)) else d)
+          P
