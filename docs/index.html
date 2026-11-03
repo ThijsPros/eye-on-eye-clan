@@ -533,9 +533,9 @@ function detail(p,cols){const f=(k,v)=>`<div class="feit"><b>${esc(v??"–")}</b
  ${f("Clan",p.inClan?p.clan:(p.clan?p.clan+" (buiten onze clans)":"Geen clan"))}${p.vorigeClan?f("Vorige clan",`${p.vorigeClan} (tot ${datum(p.overstap)})`):""}${f("TH",p.th)}${f("Helden",p.helden)}${f("Dieren",p.dieren)}${f("Equipment",p.equip)}${f("Lid sinds",sindsTekst(p))}${f("Moest doen",c.moest??0)}${f("Gedaan",c.aanv??0)}${f("Niet gedaan",c.gemis??0)}${f("3 sterren",c.drieProcent!=null?Math.round(c.drieProcent)+"%":null)}${f("Laatste oorlog",c.laatste?datum(c.laatste):null)}${f("Rol",p.rol)}${f("Tag",p.tag)}</div></td></tr>`}
 function zichtbaar(){const l=D.players.filter(p=>{
  if(zoek&&!p.naam.toLowerCase().includes(zoek))return false;
- if(!p.inClan&&!zoek)return false;
+ if(!p.inClan&&!zoek&&clanFilter!=="uit")return false;
  if(thFilter&&String(p.th)!==thFilter)return false;
- if(clanFilter&&p.clanTag!==clanFilter)return false;
+ if(clanFilter==="uit"){if(p.inClan)return false}else if(clanFilter&&p.clanTag!==clanFilter)return false;
  if(filter==="laag")return laag(p);if(filter==="hoog")return (p.cw?.moest??0)>=D.grensAanvallen;return true});
  const e=v=>v==null||v==="";
  return [...l].sort((a,b)=>{const x=waarde(a,sort.k),y=waarde(b,sort.k);if(e(x)&&e(y))return 0;if(e(x))return 1;if(e(y))return -1;return (typeof x==="string"?x.localeCompare(y,"nl"):x-y)*sort.dir})}
@@ -547,9 +547,9 @@ function rijen(){return zichtbaar().map(p=>{const c0=cijfers(p),d=p.d||{},m=c0.m
 function kop(){return COLS.map(([k,t,n,o,kort])=>`<th class="${n?"n ":""}${o?"opt":""}" aria-sort="${sort.k===k?(sort.dir>0?"ascending":"descending"):"none"}"><button data-k="${k}">${kort?`<span class="lang">${t}</span><span class="kort">${kort}</span>`:t}</button></th>`).join("")}
 function chip(soort,waarde,label,actief,c){return `<button class="chip" data-${soort}="${esc(waarde)}" aria-pressed="${actief===waarde}">${c?schild(c.nr,20):""}${esc(label)}</button>`}
 function spelersView(){return `<section class="sectie"><h2>Alle leden</h2>
- <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Tik op een naam voor het profiel. Oud-leden staan hier niet tussen; zoek op naam om ze te vinden.</p>
+ <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Tik op een naam voor het profiel.</p>
  <div class="tools"><input id="zoek" type="search" placeholder="Zoek lid of oud-lid" aria-label="Zoek lid of oud-lid" value="${esc(zoek)}">
- </div><div class="chips">${chip("cf","","Alle clans",clanFilter)}${[...D.clans].sort((a,b)=>a.nr-b.nr).map(c=>chip("cf",c.tag,c.naam,clanFilter,c)).join("")}</div><div class="chips">${chip("ls","","CW en CWL",lidSoort)}${chip("ls","oorlog","CW",lidSoort)}${chip("ls","cwl","CWL",lidSoort)}</div><div class="tools">
+ </div><div class="chips">${chip("cf","","Alle clans",clanFilter)}${[...D.clans].sort((a,b)=>a.nr-b.nr).map(c=>chip("cf",c.tag,c.naam,clanFilter,c)).join("")}${chip("cf","uit","Oud-leden",clanFilter)}</div><div class="chips">${chip("ls","","CW en CWL",lidSoort)}${chip("ls","oorlog","CW",lidSoort)}${chip("ls","cwl","CWL",lidSoort)}</div><div class="tools">
  <select id="thf" aria-label="Filter op TH"><option value="">Alle TH</option>${[...new Set(D.players.map(p=>p.th).filter(Boolean))].sort((a,b)=>b-a).map(t=>`<option value="${t}"${thFilter===String(t)?" selected":""}>TH ${t}</option>`).join("")}</select><select id="filter" aria-label="Filter spelers"><option value="">Alle leden</option><option value="hoog"${filter==="hoog"?" selected":""}>${D.grensAanvallen} of meer aanvallen</option><option value="laag"${filter==="laag"?" selected":""}>Onder ${D.grensAanvallen} aanvallen</option></select>
  <span class="teller" id="teller"></span></div>
  <div class="tablebox"><table><thead><tr id="kop">${kop()}</tr></thead><tbody id="rijen">${rijen()}</tbody></table></div></section>`}
