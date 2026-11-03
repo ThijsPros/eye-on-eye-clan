@@ -69,6 +69,10 @@ def main():
     if set((roof_oud or {}).get("weekenden", {})) - set(roof["weekenden"]):
         fouten.append("Er zijn roofweekenden verdwenen.")
 
+    games, games_oud = lees(DATA / "clangames.json"), eerder("docs/data/clangames.json")
+    if set((games_oud or {}).get("edities", {})) - set(games["edities"]):
+        fouten.append("Er zijn Clan Games-edities verdwenen.")
+
     for p in latest["players"]:
         if len(p["s"]) != len(maanden):
             fouten.append(f"Reeks heeft de verkeerde lengte: {p['tag']}")

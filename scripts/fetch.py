@@ -107,6 +107,13 @@ def league_of(player):
     return name, number % 1000 if isinstance(number, int) else 0
 
 
+def clan_eisen(clan):
+    tier = clan.get("requiredLeagueTier") or {}
+    naam, nummer = league_of({"leagueTier": tier})
+    return {"th": clan.get("requiredTownhallLevel") or 0, "trofeeen": clan.get("requiredTrophies") or 0,
+            "lgn": nummer if tier and naam != "Unranked" else 0, "league": naam if tier and naam != "Unranked" else None}
+
+
 def is_troep(x):
     """Gewone thuistroep: geen dier, geen tijdelijke supertroep."""
     return x["name"] not in PETS and x["name"] not in SUPER and not x["name"].startswith("Super ")
@@ -125,6 +132,8 @@ def summarize_player(raw):
         "helden": sum(x["level"] for x in home(raw.get("heroes", []))),
         "dieren": sum(x["level"] for x in home(raw.get("troops", [])) if x["name"] in PETS),
         "equip": sum(x["level"] for x in home(raw.get("heroEquipment", []))),
+        "trofeeen": raw.get("trophies"),
+        "gamesTotaal": next((a.get("value") for a in raw.get("achievements", []) if a.get("name") == "Games Champion"), None),
         "spreuken": sum(x["level"] for x in home(raw.get("spells", []))),
         "troepen": sum(x["level"] for x in home(raw.get("troops", [])) if is_troep(x)),
         "rol": ROLES.get(raw.get("role"), raw.get("role") or ""),
@@ -616,6 +625,33 @@ def roof_bijwerken(clans):
     write_json(pad, opslag)
 
 
+def games_bijwerken(players, clan_tags):
+    """Clan Games: de API kent alleen het levenslange totaal, dus de punten zijn stand min beginstand."""
+    pad = DATA / "clangames.json"
+    opslag = read_json(pad, {"edities": {}})
+    start = NOW.replace(day=22, hour=7, minute=0, second=0, microsecond=0)
+    einde = NOW.replace(day=28, hour=9, minute=0, second=0, microsecond=0)
+    bevriezen = einde + timedelta(hours=2)
+    editie = opslag["edities"].setdefault(NOW.strftime("%Y-%m"), {
+        "start": start.strftime("%Y%m%dT%H%M%S.000Z"), "einde": einde.strftime("%Y%m%dT%H%M%S.000Z"),
+        "status": "komt", "basis": {}, "stand": {}, "clan": {},
+    })
+    if NOW > bevriezen:
+        editie["status"] = "klaar"
+    for tag, player in players.items():
+        waarde = player.get("gamesTotaal")
+        if waarde is None or player.get("clanTag") not in clan_tags or player.get("verouderd"):
+            continue
+        if NOW < start:
+            editie["basis"][tag] = waarde
+        elif NOW <= bevriezen:
+            editie["status"] = "actief"
+            editie["basis"].setdefault(tag, waarde)
+            editie["stand"][tag] = waarde
+            editie["clan"][tag] = player["clanTag"]
+    write_json(pad, opslag)
+
+
 def stand_bijwerken(series, month, earlier, current, stale=False):
     """De eerste meting van een maand staat vast. Geeft de groei sinds die stand en de leaguewissel."""
     if not stale and month not in series:
@@ -818,6 +854,7 @@ def main():
         clan_status.append({
             "tag": wars_tag, "nr": clan["nr"], "rol": clan["rol"], "naam": clan["name"], "niveau": clan.get("clanLevel"),
             "leden": clan.get("members"), "warLeague": (clan.get("warLeague") or {}).get("name"),
+            "eisen": clan_eisen(clan),
             "logo": (clan.get("badgeUrls") or {}).get("medium"), "winst": clan.get("warWins"), "serie": clan.get("warWinStreak"), **status,
         })
 
@@ -897,6 +934,7 @@ def main():
 
     write_json(DATA / "history.json", history)
     roof_bijwerken(clans)
+    games_bijwerken(players, clan_tags)
     maand_dagen = CONFIG["maand_venster_dagen"]
     maand_oorlog, maand_verdediging = own_stats(wars, maand_dagen), defence_stats(wars, maand_dagen)
     clan_nummers = {c["tag"]: c["nr"] for c in clan_status}
@@ -938,6 +976,7 @@ def main():
         "vensterVol": window_full,
         "eersteOorlog": wars[0]["start"][:8] if wars else None,
         "grensAanvallen": CONFIG["grens_aanvallen"],
+        "gamesDoel": CONFIG["clangames_doel"],
         "clans": clan_status,
         "players": output,
         "oorlogen": summaries,

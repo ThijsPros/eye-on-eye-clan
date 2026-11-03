@@ -75,6 +75,24 @@ function upstreamPath(pathname) {
   return null;
 }
 
+async function roofStatus(url, env) {
+  const tags = (url.searchParams.get("tags") || "").split(",").filter((t) => TAG.test(t)).slice(0, 8);
+  const lijst = await Promise.all(tags.map(async (tag) => {
+    const data = await cachedJson(`/clans/%23${tag}/capitalraidseasons?limit=1`, env);
+    const w = data?.items?.[0];
+    if (!w || w.state !== "ongoing") return null;
+    return {
+      clan: "#" + tag, start: w.startTime, einde: w.endTime, status: w.state, buit: w.capitalTotalLoot,
+      raids: w.raidsCompleted, aanvallen: w.totalAttacks, wijken: w.enemyDistrictsDestroyed,
+      leden: (w.members || []).map((m) => ({
+        tag: m.tag, naam: m.name, aanv: m.attacks || 0, limiet: m.attackLimit || 0,
+        bonus: m.bonusAttackLimit || 0, buit: m.capitalResourcesLooted || 0,
+      })),
+    };
+  }));
+  return new Response(JSON.stringify(lijst.filter(Boolean)), { headers: headers() });
+}
+
 export default {
   // Start elk uur de ophaalronde in GitHub; de planning van GitHub zelf is onbetrouwbaar.
   async scheduled(event, env) {
@@ -98,6 +116,7 @@ export default {
     if (request.method !== "GET") return new Response("{}", { status: 405, headers: headers() });
     const url = new URL(request.url);
     if (url.pathname === "/cwl") return cwlStatus(url, env);
+    if (url.pathname === "/roof") return roofStatus(url, env);
     const path = upstreamPath(url.pathname);
     if (!path) return new Response("{}", { status: 404, headers: headers() });
 
