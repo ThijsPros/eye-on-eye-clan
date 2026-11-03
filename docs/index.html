@@ -298,6 +298,21 @@ input,select{background:#0F2A66;border-color:#2E4F99}
 .eqgrid h4,.rondeblok h4{font:400 18px/1.1 var(--display);margin:0 0 6px}
 .rondeblok{display:grid;gap:6px}
 .totaalrij th,.totaalrij td{font-weight:700;background:rgb(0 0 0/.2)}
+.planner{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start}
+.bak{display:grid;gap:8px;min-width:0}
+.bakbox{max-height:calc(100vh - 150px);min-height:300px;overflow:auto;border:2px solid #081538;border-radius:12px;background:#17336F}
+.bakbox table{font-size:13px}.bakbox th{position:sticky;top:0;z-index:2;padding:6px 4px;font-size:12px}.bakbox th button{all:unset;cursor:pointer;padding:0}.bakbox th button[aria-pressed="true"]{color:var(--gold)}
+.bakbox td{padding:4px;border-bottom:1px solid #2E4F99}.bakbox tr[draggable]{cursor:grab}.bakbox tr.ingedeeld{opacity:.55}.bakbox tr.gekozen td{outline:2px solid var(--gold);outline-offset:-2px}
+.bakbox small{opacity:.75}.bakbox .naam{max-width:112px}
+.mini{padding:2px;font-size:12px;width:78px}
+.vlag{background:var(--gold);color:#3A2600;border-radius:4px;padding:0 4px;font-size:11px;font-weight:700}
+.planner .vakken{grid-template-columns:1fr;gap:10px}
+.planner .vak ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.planner .vak li{grid-template-columns:18px minmax(0,1fr);min-height:32px;gap:3px;border:0;background:rgb(0 0 0/.2);border-radius:5px;padding:1px 4px;font-size:13px}
+.planner .vak li.open{outline:1px dashed var(--gold)}.planner .vak li.erboven,.bakbox.erboven{outline:2px solid var(--gold)}
+.kaart{display:flex;justify-content:space-between;gap:3px;min-width:0;cursor:grab;align-items:center}.kaart .ster{font-size:11px}.kaart .naam{max-width:none;font-size:13px}
+@media (max-width:1040px){.planner{grid-template-columns:1fr}.bakbox{max-height:60vh}.planner .vakken{order:-1}}
+@media (max-width:560px){.planner .vak ol{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -326,7 +341,7 @@ const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice
 const klok=d=>d.toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
-let D,lidSoort="",thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
+let D,bakPool="13",bakZoek="",bakVrij=false,bakSort="score",gekozen=null,lidSoort="",thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
 const clanVan=t=>D.clans.find(c=>c.tag===t);
 function schild(nr,maat=40){const c=nr?D?.clans.find(x=>x.nr===nr):null;
  if(c?.logo)return `<img class="logo" src="${esc(c.logo)}" width="${maat}" height="${maat}" alt="${esc(c.naam)}" loading="lazy">`;
@@ -515,31 +530,45 @@ function opstellingTekst(){const uit=VAKKEN.map(v=>{const c=D.clans.find(x=>x.nr
  D.players.filter(p=>K(p).plek>=v.van&&K(p).plek<=v.tot).sort((a,b)=>K(a).plek-K(b).plek).forEach(p=>r.push(`${K(p).plek-v.van+1}. ${p.naam}`));
  return r.length?`${c?.naam??"Clan "+v.nr}\n${r.join("\n")}`:null}).filter(Boolean);
  return `🛡️ Opstelling CWL\n\n${uit.join("\n\n")}`}
-function keuzeSelect(p,veld,opties){const v=K(p)[veld]||"";if(!bewerk)return v?esc(v):'<span class="weg">–</span>';
- return `<select data-p="${pid(p)}" data-veld="${veld}" aria-label="${veld} ${esc(p.naam)}"><option value=""></option>${opties.map(o=>`<option${o===v?" selected":""}>${o}</option>`).join("")}</select>`}
-function slot(n,v,bezet){const p=bezet[n],nr=n-v.van+1;let mid;
- if(bewerk){const opt=q=>`<option value="${pid(q)}"${q===p?" selected":""}>${esc(q.naam)}${K(q).plek!=null&&q!==p?` (${plekNaam(K(q).plek)})`:""}</option>`;
-  const vrij=D.players.filter(q=>K(q).plek==null),in_=D.players.filter(q=>K(q).plek!=null);
-  mid=`<select data-slot="${n}" aria-label="Clan ${ROMEINS[v.nr]} plek ${nr}"><option value="">Leeg</option><optgroup label="Reserve">${vrij.map(opt).join("")}</optgroup><optgroup label="Ingedeeld">${in_.map(opt).join("")}</optgroup></select>`}
- else mid=p?`<button class="naam sn" data-speler="${pid(p)}">${esc(p.naam)}</button>`:'<span class="weg">Leeg</span>';
- return `<li><span class="nr">${nr}</span>${mid}${!bewerk&&p?`<span class="ster">${gem(p)!=null?gem(p).toFixed(2):""}</span>`:""}</li>`}
+const eigenaar=p=>K(p).whatsapp||p.tag;
+const clanNr=p=>p.inClan?clanVan(p.clanTag)?.nr:null;
+const huidigCwl=()=>D.clans.find(c=>c.cwl?.seizoen)?.cwl.seizoen.slice(0,7);
+function laatsteCwl(p){const s=p.cw?.cwlSeizoenen||{},m=Object.keys(s).filter(x=>x!==huidigCwl()).sort().pop();return m?s[m]:null}
+function poolStats(lijst){const velden={gem:p=>p.cw?.gem??null,cwl:p=>laatsteCwl(p)?.sterren??null,helden:p=>p.helden,dieren:p=>p.dieren,equip:p=>p.equip},grens={};
+ Object.entries(velden).forEach(([k,f])=>{const v=lijst.map(f).filter(x=>x!=null);grens[k]=[Math.min(...v),Math.max(...v)]});
+ const schaal=(k,v)=>{if(v==null)return null;const[a,b]=grens[k];return b>a?(v-a)/(b-a):1};
+ const uit=new Map;lijst.forEach(p=>{const n=Object.fromEntries(Object.entries(velden).map(([k,f])=>[k,schaal(k,f(p))]));const c=laatsteCwl(p);
+  let score=.3*(n.gem??0)+.3*(n.cwl??0)+.15*(n.helden??0)+.1*(n.dieren??0)+.15*(n.equip??0);
+  const doorzetter=c&&c.sterren>=21&&clanVan(c.clan)?.nr===3;if(doorzetter)score+=.15;if(K(p).keuze==="Zekerheid")score+=.1;if(K(p).keuze==="Twijfel")score-=.1;
+  uit.set(p.tag,{...n,score:Math.round(Math.min(score,1)*100),doorzetter})});return uit}
+function advies(){const pool13=D.players.filter(p=>[1,3].includes(clanNr(p))&&K(p).keuze!=="Nee"),pool2=D.players.filter(p=>clanNr(p)===2&&K(p).keuze!=="Nee"),a=poolStats(pool13),b=poolStats(pool2),uit={},srt=(l,m)=>[...l].sort((x,y)=>m.get(y.tag).score-m.get(x.tag).score);
+ const gezien=new Set;let i=1;const rest=[];srt(pool13,a).forEach(p=>{if(i<=15&&!gezien.has(eigenaar(p))){uit[pid(p)]=i++;gezien.add(eigenaar(p))}else rest.push(p)});
+ rest.slice(0,15).forEach((p,x)=>uit[pid(p)]=16+x);srt(pool2,b).slice(0,15).forEach((p,x)=>uit[pid(p)]=101+x);return uit}
 function letOp(){const ing=D.players.filter(p=>K(p).plek!=null),m=[],n=l=>l.map(p=>esc(p.naam)).join(", ");
- const a=ing.filter(p=>K(p).appgroep==="Nee");if(a.length)m.push(`Ingedeeld maar niet in de appgroep: ${n(a)}`);
+ const a=ing.filter(p=>!K(p).whatsapp&&K(p).appgroep!=="Ja");if(a.length)m.push(`Ingedeeld maar niet in de appgroep: ${n(a)}`);
  const b=ing.filter(p=>K(p).keuze==="Nee");if(b.length)m.push(`Ingedeeld met keuze Nee: ${n(b)}`);
- const c=ing.filter(laag);if(c.length)m.push(`Ingedeeld met te weinig aanvallen: ${n(c)}`);
+ const c=ing.filter(p=>K(p).plek<=15),dub=Object.values(c.reduce((x,p)=>((x[eigenaar(p)]??=[]).push(p),x),{})).filter(l=>l.length>1);if(dub.length)m.push(`Meerdere accounts van een persoon in Clan I: ${dub.map(n).join("; ")}`);
+ const f=ing.filter(p=>(K(p).plek>100)!==(clanNr(p)===2));if(f.length)m.push(`Ingedeeld buiten de eigen pool: ${n(f)}`);
  return m.length?`<div class="letop"><h3>Let op</h3><ul>${m.map(x=>`<li>${x}</li>`).join("")}</ul></div>`:""}
-function keuzeRijen(){const z=oorlogZoek;return D.players.filter(p=>!z||p.naam.toLowerCase().includes(z)).sort((a,b)=>(K(a).plek??1e9)-(K(b).plek??1e9)||a.naam.localeCompare(b.naam,"nl")).map(p=>`<tr><td><div class="speler">${schild(p.inClan?clanVan(p.clanTag)?.nr:0,20)}<button class="naam sn" data-speler="${pid(p)}">${esc(p.naam)}</button></div></td><td>${keuzeSelect(p,"appgroep",["Ja","Nee"])}</td><td>${keuzeSelect(p,"aanmelding",["Ja","Nee"])}</td><td>${keuzeSelect(p,"keuze",KEUZES)}</td><td class="opt">${esc(plekNaam(K(p).plek))||'<span class="weg">Reserve</span>'}</td></tr>`).join("")}
+const warm=t=>t==null?"":`style="background:hsl(${Math.round(t*120)} 62% 30%)"`;
+function bakRijen(){const pool=D.players.filter(p=>bakPool==="2"?clanNr(p)===2:[1,3].includes(clanNr(p))),st=poolStats(pool),adv=advies();
+ const zicht=pool.filter(p=>(!bakZoek||p.naam.toLowerCase().includes(bakZoek))&&(!bakVrij||K(p).plek==null));
+ const w=(p,k)=>k==="score"?st.get(p.tag).score:k==="gem"?(p.cw?.gem??-1):k==="cwl"?(laatsteCwl(p)?.sterren??-1):p[k];
+ zicht.sort((a,b)=>(w(b,bakSort)??0)-(w(a,bakSort)??0));
+ return zicht.map(p=>{const s=st.get(p.tag),c=laatsteCwl(p),pl=K(p).plek,ad=adv[pid(p)];return `<tr draggable="true" data-sleep="${pid(p)}" class="${gekozen===pid(p)?"gekozen":""} ${pl!=null?"ingedeeld":""}"><td><div class="speler">${schild(clanNr(p),18)}<button class="naam sn" data-kies="${pid(p)}">${esc(p.naam)}</button>${s.doorzetter?'<span class="vlag" title="21 sterren in clan III">21★</span>':""}</div></td><td class="n opt">${p.th??""}</td><td class="n opt" ${warm(s.helden)}>${p.helden}</td><td class="n opt" ${warm(s.dieren)}>${p.dieren}</td><td class="n opt" ${warm(s.equip)}>${p.equip}</td><td class="n" ${warm(s.gem)}>${p.cw?.gem!=null?p.cw.gem.toFixed(2):"–"}</td><td class="n" ${warm(s.cwl)}>${c?`${c.sterren}<small>/${c.aanv}</small>`:"–"}</td><td class="n" ${warm(s.score/100)}><b>${s.score}</b></td><td class="opt">${ad?plekNaam(ad).replace("Clan ","").replace(", plek ","-"):"–"}</td><td class="opt"><select class="mini" data-p="${pid(p)}" data-veld="keuze" aria-label="Keuze ${esc(p.naam)}"><option value=""></option>${KEUZES.map(o=>`<option${o===K(p).keuze?" selected":""}>${o}</option>`).join("")}</select></td></tr>`}).join("")}
+function vakHtml(v,bezet){const c=D.clans.find(x=>x.nr===v.nr);let r="",tel=0;for(let n=v.van;n<=v.tot;n++){const p=bezet[n];if(p)tel++;r+=`<li data-doel="${n}" class="${gekozen?"open":""}"><span class="nr">${n-v.van+1}</span>${p?`<div class="kaart" draggable="true" data-sleep="${pid(p)}"><button class="naam sn" data-kies="${pid(p)}">${esc(p.naam)}</button><span class="ster">${p.cw?.gem!=null?p.cw.gem.toFixed(2):""}</span></div>`:'<span class="weg">Leeg</span>'}</li>`}
+ return `<article class="vak"><div class="vakkop">${schild(v.nr,28)}<h3>${esc(c?.naam??"Clan "+v.nr)}</h3><span class="teller">${tel}/15</span></div><ol>${r}</ol></article>`}
 function opstellingView(){const bezet={};D.players.forEach(p=>{if(K(p).plek!=null)bezet[K(p).plek]=p});
- const res=D.players.filter(p=>K(p).plek==null);
- const knoppen=bewerk?`<button class="knop" data-actie="opslaan"${gewijzigd?"":" disabled"}>Wijzigingen opslaan${gewijzigd?` (${gewijzigd})`:""}</button><button class="knop licht" data-actie="stop">Stop met bewerken</button><button class="knop licht" data-actie="vergeet">Sleutel vergeten</button>`:`<a class="knop" href="https://wa.me/?text=${encodeURIComponent(opstellingTekst())}" target="_blank" rel="noopener">Deel in WhatsApp</a><button class="knop licht" data-kopieer="opsttekst">Kopieer voor de appgroep</button><button class="knop licht" data-actie="bewerk">Opstelling bewerken</button>`;
- return `<section class="sectie"><h2>Opstelling CWL</h2><div class="tools">${knoppen}<span class="teller" id="opslagmelding" role="status">${esc(opslagMelding)}</span></div>
- <div id="sleutelform" hidden class="sleutel"><label for="sleutel">GitHub-sleutel met schrijfrecht op de clan-repository</label><div class="tools"><input id="sleutel" type="password" autocomplete="off"><button class="knop" data-actie="sleutel">Start met bewerken</button></div><p class="uitleg">De sleutel blijft in deze browser en gaat alleen naar GitHub.</p></div>
- <textarea id="opsttekst" hidden readonly>${esc(opstellingTekst())}</textarea>${letOp()}
- <div class="vakken">${VAKKEN.map(v=>{const c=D.clans.find(x=>x.nr===v.nr);const t=v.tot;let r="";for(let n=v.van;n<=t;n++)r+=slot(n,v,bezet);
-  return `<article class="vak"><div class="vakkop">${schild(v.nr,32)}<h3>${esc(c?.naam??"Clan "+v.nr)}</h3></div><ol>${r}</ol></article>`}).join("")}</div>
- <details class="reserve"><summary>Reserve (${res.length} spelers)</summary><p>${res.map(p=>esc(p.naam)).join(", ")}</p></details></section>
- <section class="sectie"><h2>Keuzes per speler</h2><div class="tools"><input id="kzoek" type="search" placeholder="Zoek speler" aria-label="Zoek speler" value="${esc(oorlogZoek)}"></div>
- <div class="tablebox"><table><thead><tr><th><span class="kp">Speler</span></th><th><span class="kp">Appgroep</span></th><th><span class="kp">Aanmelding</span></th><th><span class="kp">Keuze</span></th><th class="opt"><span class="kp">Plek</span></th></tr></thead><tbody id="krijen">${keuzeRijen()}</tbody></table></div></section>`}
+ const kolom=(k,t,c="n")=>`<th class="${c}"><button data-baksort="${k}" aria-pressed="${bakSort===k}">${t}</button></th>`;
+ return `<section class="sectie"><h2>Opstelling CWL</h2><div class="tools"><button class="knop" data-actie="advies">Vul met advies</button><button class="knop licht" data-actie="opslaan"${gewijzigd?"":" disabled"}>Opstelling opslaan${gewijzigd?` (${gewijzigd})`:""}</button>${gewijzigd?'<button class="knop licht" data-actie="herstel">Wijzigingen wissen</button>':""}<a class="knop licht" href="https://wa.me/?text=${encodeURIComponent(opstellingTekst())}" target="_blank" rel="noopener">Deel in WhatsApp</a><span class="teller" id="opslagmelding" role="status">${esc(opslagMelding)}</span></div>
+ <div id="sleutelform" hidden class="sleutel"><label for="sleutel">GitHub-sleutel met schrijfrecht op de clan-repository</label><div class="tools"><input id="sleutel" type="password" autocomplete="off"><button class="knop" data-actie="sleutel">Opslaan</button></div><p class="uitleg">De sleutel blijft in deze browser en gaat alleen naar GitHub.</p></div>
+ ${letOp()}<div class="planner"><div class="bak"><div class="tools"><div class="chips"><button class="chip" data-bak="13" aria-pressed="${bakPool==="13"}">Clan I en III</button><button class="chip" data-bak="2" aria-pressed="${bakPool==="2"}">Clan II</button><button class="chip" data-bakvrij aria-pressed="${bakVrij}">Alleen niet ingedeeld</button></div><input id="bakzoek" type="search" placeholder="Zoek speler" aria-label="Zoek speler" value="${esc(bakZoek)}"></div>
+ <div class="bakbox" id="bakbox" data-doel="0"><table><thead><tr><th>Speler</th>${kolom("th","TH","n opt")}${kolom("helden","Held","n opt")}${kolom("dieren","Dier","n opt")}${kolom("equip","Equip","n opt")}${kolom("gem","Gem")}${kolom("cwl","CWL ★")}${kolom("score","Score")}<th class="opt">Advies</th><th class="opt">Keuze</th></tr></thead><tbody id="bakrijen">${bakRijen()}</tbody></table></div>
+ <p class="uitleg">Sleep een speler naar een plek, of tik op een naam en daarna op een plek. Sleep terug naar de lijst om iemand uit de opstelling te halen. Score: 30% gemiddelde, 30% sterren vorige CWL, 15% helden, 15% equipment en 10% dieren, plus extra voor 21★ in clan III.</p></div>
+ <div class="vakken">${VAKKEN.map(v=>vakHtml(v,bezet)).join("")}</div></div></section>`}
+function verplaats(id,doel){const p=D.players.find(x=>pid(x)===id);if(!p)return;const oud=K(p).plek??null;if(doel===oud)return;const ander=doel?D.players.find(x=>K(x).plek===doel):null;
+ if(ander)zetKeuze(pid(ander),"plek",oud);zetKeuze(id,"plek",doel||null);gekozen=null;concept();render()}
+function concept(){try{localStorage.setItem("eoe-concept",JSON.stringify(L))}catch{}}
 function zetKeuze(id,veld,w){const r={...(L.spelers[id]||{})};if(w===""||w==null)delete r[veld];else r[veld]=w;if(Object.keys(r).length)L.spelers[id]=r;else delete L.spelers[id];gewijzigd++}
 const sleutelLees=()=>{try{return localStorage.getItem("eoe-sleutel")}catch{return null}};
 const sleutelZet=v=>{try{v?localStorage.setItem("eoe-sleutel",v):localStorage.removeItem("eoe-sleutel")}catch{}};
@@ -547,8 +576,7 @@ const b64=t=>{let x="";new TextEncoder().encode(t).forEach(c=>x+=String.fromChar
 const tekstVan=b=>new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g,"")),c=>c.charCodeAt(0)));
 const ghFout=s=>s===401?"De sleutel is ongeldig of verlopen. Vul een nieuwe sleutel in.":s===403||s===404?"Deze sleutel mag niet schrijven in de repository. Geef hem Contents: Read and write.":s===409||s===422?"Iemand anders heeft de opstelling net gewijzigd. Vernieuw de pagina en probeer het opnieuw.":"Opslaan is niet gelukt. Controleer je verbinding en probeer het opnieuw.";
 async function gh(opties={}){const r=await fetch(LEIDING_URL+(opties.method?"":"?ref=main"),{...opties,cache:"no-store",headers:{Authorization:"Bearer "+sleutelLees(),Accept:"application/vnd.github+json"}});if(!r.ok){const e=new Error("gh");e.status=r.status;throw e}return r.json()}
-async function startBewerken(){opslagMelding="Laden…";render();try{const f=await gh();sha=f.sha;L=JSON.parse(tekstVan(f.content));bewerk=true;gewijzigd=0;opslagMelding=""}catch(e){opslagMelding=ghFout(e.status);if(e.status===401)sleutelZet(null)}render()}
-async function opslaan(){opslagMelding="Opslaan…";render();try{const tekst=JSON.stringify(L,null,1)+"\n",r=await gh({method:"PUT",body:JSON.stringify({message:"Opstelling bijwerken",content:b64(tekst),sha,branch:"main"})});sha=r.content.sha;gewijzigd=0;opslagMelding="Opgeslagen. Voor anderen zichtbaar binnen enkele minuten."}catch(e){opslagMelding=ghFout(e.status)}render()}
+async function opslaan(){if(!sleutelLees()){$("sleutelform").hidden=false;$("sleutel").focus();return}opslagMelding="Opslaan…";render();try{const f=await gh();const tekst=JSON.stringify(L,null,1)+"\n",r=await gh({method:"PUT",body:JSON.stringify({message:"Opstelling bijwerken",content:b64(tekst),sha:f.sha,branch:"main"})});sha=r.content.sha;gewijzigd=0;try{localStorage.removeItem("eoe-concept")}catch{}opslagMelding="Opgeslagen. Voor anderen zichtbaar binnen enkele minuten."}catch(e){opslagMelding=ghFout(e.status);if(e.status===401||e.status===403||e.status===404)sleutelZet(null)}render()}
 
 async function laadArchief(){if(archief)return;try{const r=await fetch("data/archief.json",{cache:"no-store"});if(!r.ok)return;const a=await r.json();
  archief=Object.entries(a).flatMap(([tag,rows])=>{const c=clanVan(tag);return rows.map(r=>({id:`a-${tag}-${r.einde}`,soort:r.soort,ronde:r.ronde,status:"warEnded",start:r.start,einde:r.einde,grootte:r.grootte,gebruikt:r.gebruikt,totaal:r.totaal,open:[],
@@ -628,28 +656,37 @@ addEventListener("click",async e=>{const t=e.target.closest("[data-tab]");if(t){
  const rd=e.target.closest("[data-ronde]");if(rd){const f=document.querySelector(".front")?.scrollLeft;rondeKeuze[rd.dataset.kclan]=+rd.dataset.ronde;render();document.querySelector(".front").scrollLeft=f;return}
  const cv=e.target.closest("[data-cwlv]");if(cv){cwlWeergave[cv.dataset.cwlv]=cv.dataset.w;$("inhoud").innerHTML=overzichtView();return}
  const cr=e.target.closest("[data-cwlr]");if(cr){cwlRonde[cr.dataset.cwlr]=+cr.dataset.n;$("inhoud").innerHTML=overzichtView();return}
+ const bk=e.target.closest("[data-bak]");if(bk){bakPool=bk.dataset.bak;render();return}
+ if(e.target.closest("[data-bakvrij]")){bakVrij=!bakVrij;render();return}
+ const bs=e.target.closest("[data-baksort]");if(bs){bakSort=bs.dataset.baksort;render();return}
+ const ki=e.target.closest("[data-kies]");if(ki&&tab==="opstelling"){gekozen=gekozen===ki.dataset.kies?null:ki.dataset.kies;render();return}
+ const dl=e.target.closest("[data-doel]");if(dl&&gekozen&&tab==="opstelling"){verplaats(gekozen,+dl.dataset.doel);return}
  const k=e.target.closest("[data-k]");if(k){const c=k.dataset.k;if(sort.k===c)sort.dir*=-1;else sort={k:c,dir:c==="naam"?1:-1};tabel();return}
  const o=e.target.closest("[data-open]");if(o){const i=decodeURIComponent(o.dataset.open);open.has(i)?open.delete(i):open.add(i);tabel();return}
  const b=e.target.closest("[data-actie]");if(b){const a=b.dataset.actie;
-  if(a==="bewerk"){if(sleutelLees())startBewerken();else{$("sleutelform").hidden=false;$("sleutel").focus()}}
-  if(a==="sleutel"){const w=$("sleutel").value.trim();if(w){sleutelZet(w);startBewerken()}}
-  if(a==="stop"){if(!gewijzigd||confirm("Niet-opgeslagen wijzigingen weggooien?")){bewerk=false;gewijzigd=0;opslagMelding="";await laadLeiding();render()}}
-  if(a==="vergeet"){sleutelZet(null);bewerk=false;gewijzigd=0;opslagMelding="Sleutel verwijderd uit deze browser.";await laadLeiding();render()}
-  if(a==="opslaan")opslaan();if(a==="meer"){oorlogAantal+=100;render()}return}
+  if(a==="sleutel"){const w=$("sleutel").value.trim();if(w){sleutelZet(w);opslaan()}}
+  if(a==="opslaan")opslaan();
+  if(a==="advies"&&confirm("De huidige opstelling vervangen door het advies?")){const ad=advies();D.players.forEach(p=>{if(K(p).plek!=null||ad[pid(p)])zetKeuze(pid(p),"plek",ad[pid(p)]??null)});concept();render()}
+  if(a==="herstel"&&confirm("Niet-opgeslagen wijzigingen wissen?")){try{localStorage.removeItem("eoe-concept")}catch{}gewijzigd=0;await laadLeiding(true);render()}
+  if(a==="meer"){oorlogAantal+=100;render()}return}
  const c=e.target.closest("[data-kopieer]");if(c){const oud=c.textContent;const v=$(c.dataset.kopieer);try{await navigator.clipboard.writeText(v.value);c.textContent="Gekopieerd"}catch{v.select();c.textContent="Selecteer de tekst en kopieer zelf"}setTimeout(()=>c.textContent=oud,2200)}});
 setInterval(ververs,3e4);
 document.addEventListener("visibilitychange",ververs);
 addEventListener("toggle",e=>{const d=e.target;if(d.dataset?.lijst){d.open?dichteLijst.delete(d.dataset.lijst):dichteLijst.add(d.dataset.lijst)}},true);
 setInterval(()=>document.querySelectorAll("[data-tot]").forEach(x=>{x.textContent=resttijd(+x.dataset.tot)}),1e3);
-addEventListener("input",e=>{if(e.target.id==="zoek"){zoek=e.target.value.trim().toLowerCase();tabel()}if(e.target.id==="kzoek"){oorlogZoek=e.target.value.trim().toLowerCase();$("krijen").innerHTML=keuzeRijen()}});
+addEventListener("dragstart",e=>{const t=e.target.closest?.("[data-sleep]");if(t){e.dataTransfer.setData("text/plain",t.dataset.sleep);e.dataTransfer.effectAllowed="move"}});
+addEventListener("dragover",e=>{const d=e.target.closest?.("[data-doel]");if(d){e.preventDefault();d.classList.add("erboven")}});
+addEventListener("dragleave",e=>e.target.closest?.("[data-doel]")?.classList.remove("erboven"));
+addEventListener("drop",e=>{const d=e.target.closest?.("[data-doel]");if(!d)return;e.preventDefault();const id=e.dataTransfer.getData("text/plain");if(id)verplaats(id,+d.dataset.doel)});
+addEventListener("input",e=>{if(e.target.id==="zoek"){zoek=e.target.value.trim().toLowerCase();tabel()}if(e.target.id==="bakzoek"){bakZoek=e.target.value.trim().toLowerCase();$("bakrijen").innerHTML=bakRijen()}});
 addEventListener("beforeunload",e=>{if(gewijzigd)e.preventDefault()});
 addEventListener("change",e=>{if(e.target.id==="filter"){filter=e.target.value;tabel()}if(e.target.id==="thf"){thFilter=e.target.value;tabel()}if(e.target.id==="clanf"){clanFilter=e.target.value;tabel()}if(e.target.id==="oorlogclan"){oorlogClan=e.target.value;oorlogAantal=100;render()}if(e.target.id==="oorlogsoort"){oorlogSoort=e.target.value;oorlogAantal=100;render()}
  const t=e.target;if(t.dataset.veld){zetKeuze(t.dataset.p,t.dataset.veld,t.value);render()}
- if(t.dataset.slot){const n=+t.dataset.slot,nieuw=t.value,oud=D.players.find(p=>K(p).plek===n);if(oud&&pid(oud)===nieuw)return;
-  const herkomst=nieuw?(L.spelers[nieuw]?.plek??null):null;if(oud)zetKeuze(pid(oud),"plek",herkomst);if(nieuw)zetKeuze(nieuw,"plek",n);render()}});
+ if(t.dataset.veld)concept();});
 addEventListener("hashchange",()=>{if(!D)return;route();render();scrollTo(0,0)});
 
-async function laadLeiding(){try{const r=await fetch("data/leiding.json",{cache:"no-store"});if(r.ok)L=await r.json()}catch{}}
+async function laadLeiding(negeer){try{const r=await fetch("data/leiding.json",{cache:"no-store"});if(r.ok)L=await r.json()}catch{}
+ if(negeer)return;try{const c=localStorage.getItem("eoe-concept");if(c&&c!==JSON.stringify(L)){L=JSON.parse(c);gewijzigd=1}}catch{}}
 (async()=>{route();nav();
  try{const r=await fetch("data/latest.json",{cache:"no-store"});if(!r.ok)throw new Error(r.status);D=await r.json();await laadLeiding();render();try{const l=await fetch("data/live.json",{cache:"no-store"});if(l.ok)liveUrl=(await l.json()).url?.replace(/\/$/,"")||null;ververs()}catch{}
   if((Date.now()-new Date(D.bijgewerkt))/36e5>12)$("inhoud").insertAdjacentHTML("afterbegin",'<p class="melding" style="margin-bottom:18px">Deze gegevens zijn ouder dan 12 uur. Controleer de workflow in GitHub Actions.</p>')}
