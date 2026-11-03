@@ -1,0 +1,29 @@
+name: Bronnen onderzoeken
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sS -m 40 https://api.clashk.ing/openapi.json -o o.json
+          python3 - <<'P'
+          import json,urllib.request,urllib.parse
+          d=json.load(open('o.json'))
+          for p,v in d['paths'].items():
+              if 'cwl' in p.lower() or 'league' in p.lower() and 'clan' in p.lower():
+                  print('PAD',p,[(x.get('name')) for x in v.get('get',{}).get('parameters',[])])
+          def g(u):
+              try:
+                  b=urllib.request.urlopen(urllib.request.Request('https://api.clashk.ing'+u,headers={'User-Agent':'eye-on-eye'}),timeout=40).read().decode();print('OK',u,len(b),b[:500]);return json.loads(b)
+              except Exception as e:
+                  print('ERR',u,e)
+          q=urllib.parse.quote('#PYQ2RLCQ',safe='')
+          for u in [f'/cwl/{q}/2026-10',f'/cwl/{q}/group/2026-10',f'/v2/cwl/{q}/2026-10',f'/v2/cwl/group/{q}/2026-10']:
+              r=g(u)
+              if isinstance(r,dict) and r.get('rounds'):
+                  cl=[c['tag'] for c in r['clans']];print('CLANS',len(cl))
+                  print('RONDES',json.dumps(r['rounds'])[:900])
+          P
