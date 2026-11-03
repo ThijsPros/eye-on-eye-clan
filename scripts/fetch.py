@@ -21,6 +21,7 @@ WARS = DATA / "wars"
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf8"))
 BASE = os.environ.get("COC_API_BASE", "https://cocproxy.royaleapi.dev/v1").rstrip("/")
 NOW = datetime.now(timezone.utc)
+CLASHKING = "https://api.clashk.ing"
 
 PETS = {
     "L.A.S.S.I", "Electro Owl", "Mighty Yak", "Unicorn", "Frosty", "Diggy",
@@ -231,6 +232,80 @@ def collect_wars(clan):
     return status
 
 
+def clashking(path):
+    """Haalt geschiedenis op bij ClashKing. Een storing stopt de ophaalronde niet."""
+    request = urllib.request.Request(CLASHKING + path, headers={"User-Agent": "eye-on-eye-clan"})
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            return json.load(response).get("items", [])
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return None
+
+
+def to_date(value):
+    return f"{value[:4]}-{value[4:6]}-{value[6:8]}"
+
+
+def backfill(clans, history):
+    """Vult oorlogen en eerste datums aan. Draait een keer per dag."""
+    today = NOW.strftime("%Y-%m-%d")
+    if history.get("ckDatum") == today:
+        return
+    first = history.setdefault("eerst", {})
+    cutoff = NOW - timedelta(days=CONFIG["venster_dagen"] + 35)
+    complete = True
+    for clan in clans:
+        tag, safe_tag = clan["tag"], clan["tag"].strip("#")
+        wars = clashking(f"/v2/clan/{tag_url(tag)}/wars?limit=2000")
+        if wars is None:
+            wars = clashking(f"/v2/clan/{tag_url(tag)}/wars?limit=500")
+        if wars is None:
+            complete = False
+            continue
+        wars = [w for w in wars if w.get("state") == "warEnded" and w.get("startTime")]
+        rounds = {}
+        for war in sorted((w for w in wars if w.get("tag")), key=lambda w: w["startTime"]):
+            month = war["startTime"][:6]
+            rounds[month] = rounds.get(month, 0) + 1
+            war["_ronde"] = rounds[month]
+        for war in wars:
+            normalized_id = (
+                f"cwl-{safe_tag}-{war['tag'].strip('#')}" if war.get("tag")
+                else f"{safe_tag}-{war['preparationStartTime'][:13]}"
+            )
+            side = war["clan"] if war["clan"].get("tag") == tag else war["opponent"]
+            date = to_date(war["startTime"])
+            for member in side.get("members", []):
+                first[member["tag"]] = min(first.get(member["tag"], date), date)
+            if parse_time(war["startTime"]) < cutoff:
+                continue
+            stored = read_json(WARS / (normalized_id + ".json"), None)
+            if stored and stored["status"] == "warEnded":
+                continue
+            season = f"{war['startTime'][:4]}-{war['startTime'][4:6]}-01" if war.get("tag") else None
+            normalized = normalize_war(war, normalized_id, "cwl" if war.get("tag") else "oorlog", tag, season)
+            if war.get("tag"):
+                normalized["ronde"] = war["_ronde"]
+            save_war(normalized)
+
+    ours = {clan["tag"] for clan in clans}
+    done = history.setdefault("inUitGehad", [])
+    for tag in history["spelers"]:
+        if tag in done:
+            continue
+        events = clashking(f"/player/{tag_url(tag)}/join-leave?limit=1000")
+        if events is None:
+            complete = False
+            continue
+        for event in events:
+            if event.get("clan") in ours and event.get("time"):
+                first[tag] = min(first.get(tag, event["time"][:10]), event["time"][:10])
+        done.append(tag)
+        time.sleep(0.2)
+    if complete:
+        history["ckDatum"] = today
+
+
 def load_wars():
     return sorted(
         (json.loads(p.read_text(encoding="utf8")) for p in WARS.glob("*.json")),
@@ -254,10 +329,11 @@ def own_stats(wars):
         if war["status"] == "preparation" or not start or start < cutoff:
             continue
         for member in war["leden"]:
-            s = stats.setdefault(member["tag"], {"aanv": 0, "sterren": 0, "drie": 0, "gemis": 0, "oorlogen": 0, "cwlOorlogen": 0, "laatste": None})
+            s = stats.setdefault(member["tag"], {"aanv": 0, "moest": 0, "sterren": 0, "drie": 0, "gemis": 0, "oorlogen": 0, "cwlOorlogen": 0, "laatste": None})
             s["oorlogen"] += 1
             s["cwlOorlogen"] += war["soort"] == "cwl"
             s["aanv"] += len(member["aanvallen"])
+            s["moest"] += war["aanvallenPerLid"] if war["status"] == "warEnded" else len(member["aanvallen"])
             s["sterren"] += sum(a["sterren"] for a in member["aanvallen"])
             s["drie"] += sum(a["sterren"] == 3 for a in member["aanvallen"])
             s["laatste"] = max(s["laatste"] or "", war["start"][:8])
@@ -369,6 +445,9 @@ def main():
             "logo": (clan.get("badgeUrls") or {}).get("medium"), "winst": clan.get("warWins"), "serie": clan.get("warWinStreak"), **status,
         })
 
+    for tag in players:
+        history["spelers"].setdefault(tag, {})
+    backfill(clans, history)
     wars = load_wars()
     stats = own_stats(wars)
     month = NOW.strftime("%Y-%m")
@@ -389,6 +468,7 @@ def main():
         before = series.get(earlier)
         player = dict(player)
         player["inClan"] = player.get("clanTag") in clan_tags
+        player["sinds"] = history.setdefault("eerst", {}).setdefault(tag, NOW.strftime("%Y-%m-%d"))
         move = moves.get(tag)
         if not player.get("verouderd"):
             if not move or move["tag"] != player.get("clanTag"):

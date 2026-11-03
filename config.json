@@ -17,6 +17,6 @@
       "rol": "Oorlogen tijdens de CWL"
     }
   ],
-  "venster_dagen": 90,
+  "venster_dagen": 60,
   "grens_aanvallen": 25
 }

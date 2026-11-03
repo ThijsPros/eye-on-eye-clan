@@ -23,6 +23,12 @@ oorlogsdata geeft. De API-sleutel blijft daarbij afgeschermd. Installeren gaat m
 de workflow `Live-koppeling installeren`, die de secrets `CLOUDFLARE_API_TOKEN`,
 `CLOUDFLARE_ACCOUNT_ID` en `COC_API_KEY` nodig heeft.
 
+## Geschiedenis
+
+Oude oorlogen en in- en uitstappen komen een keer per dag van ClashKing
+(api.clashk.ing), omdat de officiele API die niet bewaart. Een storing daar stopt
+de gewone ophaalronde niet.
+
 ## Instellingen
 
 In `config.json`:
