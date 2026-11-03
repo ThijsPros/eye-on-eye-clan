@@ -479,11 +479,6 @@ def own_stats(wars):
             s = stats.setdefault(member["tag"], {"aanv": 0, "moest": 0, "sterren": 0, "drie": 0, "gemis": 0, "oorlogen": 0, "cwlOorlogen": 0, "laatste": None})
             s["oorlogen"] += 1
             s["cwlOorlogen"] += war["soort"] == "cwl"
-            if war["soort"] == "cwl" and war.get("seizoen"):
-                season = s.setdefault("cwlSeizoenen", {}).setdefault(war["seizoen"][:7], {"sterren": 0, "aanv": 0, "rondes": 0, "clan": war["clan"].get("tag")})
-                season["sterren"] += sum(a["sterren"] for a in member["aanvallen"])
-                season["aanv"] += len(member["aanvallen"])
-                season["rondes"] += 1
             kind = s.setdefault("soorten", {}).setdefault(war["soort"], {"aanv": 0, "moest": 0, "sterren": 0, "gemis": 0})
             kind["aanv"] += len(member["aanvallen"])
             kind["moest"] += war["aanvallenPerLid"] if war["status"] == "warEnded" else len(member["aanvallen"])
@@ -498,6 +493,16 @@ def own_stats(wars):
             # Gemist telt alleen als de oorlog zeker is afgelopen en volledig is gezien.
             if war["status"] == "warEnded":
                 s["gemis"] += max(0, war["aanvallenPerLid"] - len(member["aanvallen"]))
+    # CWL-seizoenen tellen helemaal mee, ook als een deel buiten het venster valt.
+    for war in wars:
+        if war["soort"] != "cwl" or not war.get("seizoen") or war["status"] == "preparation":
+            continue
+        for member in war["leden"]:
+            s = stats.setdefault(member["tag"], {"aanv": 0, "moest": 0, "sterren": 0, "drie": 0, "gemis": 0, "oorlogen": 0, "cwlOorlogen": 0, "laatste": None})
+            season = s.setdefault("cwlSeizoenen", {}).setdefault(war["seizoen"][:7], {"sterren": 0, "aanv": 0, "rondes": 0, "clan": war["clan"].get("tag")})
+            season["sterren"] += sum(a["sterren"] for a in member["aanvallen"])
+            season["aanv"] += len(member["aanvallen"])
+            season["rondes"] += 1
     for s in stats.values():
         s["gem"] = round(s["sterren"] / s["aanv"], 2) if s["aanv"] else None
         s["drieProcent"] = round(100 * s["drie"] / s["aanv"], 1) if s["aanv"] else None
