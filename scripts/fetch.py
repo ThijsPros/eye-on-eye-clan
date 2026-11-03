@@ -185,6 +185,10 @@ def normalize_war(raw, war_id, kind, clan_tag, season=None):
         "einde": raw.get("endTime"),
         "clan": side_info(side),
         "tegenstander": side_info(opponent),
+        "tegenLeden": {
+            m["tag"]: {"naam": m.get("name"), "th": m.get("townhallLevel")}
+            for m in opponent.get("members", [])
+        },
         "tegenAanvallen": [
             {"sterren": a["stars"], "doel": a["defenderTag"], "duur": a.get("duration")}
             for m in opponent.get("members", []) for a in m.get("attacks", [])
@@ -418,7 +422,7 @@ def backfill(clans, history):
             if parse_time(war["startTime"]) < cutoff:
                 continue
             stored = read_json(WARS / (normalized_id + ".json"), None)
-            if stored and stored["status"] == "warEnded":
+            if stored and stored["status"] == "warEnded" and "tegenLeden" in stored:
                 continue
             season = f"{war['startTime'][:4]}-{war['startTime'][4:6]}-01" if war.get("tag") else None
             normalized = normalize_war(war, normalized_id, "cwl" if war.get("tag") else "oorlog", tag, season)
@@ -518,7 +522,7 @@ def war_summary(war):
         "gemTijdOns": average_duration(our_attacks),
         "gemTijdZij": average_duration(war.get("tegenAanvallen", [])),
         "leden": [
-            {"naam": m["naam"], "pos": m.get("pos"), "aanvallen": [{"sterren": a["sterren"], "procent": a["procent"]} for a in m["aanvallen"]]}
+            {"tag": m["tag"], "naam": m["naam"], "pos": m.get("pos"), "aanvallen": [{"sterren": a["sterren"], "procent": a["procent"]} for a in m["aanvallen"]]}
             for m in sorted(members, key=lambda m: m.get("pos") or 99)
         ],
         "status": "onvolledig" if war["status"] != "warEnded" and war_is_final(war) else war["status"],
@@ -533,6 +537,54 @@ def war_summary(war):
             {"naam": m["naam"], "over": per_member - len(m["aanvallen"])}
             for m in members if len(m["aanvallen"]) < per_member
         ],
+    }
+
+
+def player_profile(tag, raw, wars, stats):
+    """Alles voor de profielpagina van een speler."""
+    home = lambda items: [x for x in items if x.get("village", "home") == "home"]
+    pack = lambda items: [{"naam": x["name"], "lvl": x["level"], "max": x.get("maxLevel")} for x in items]
+    cutoff = NOW - timedelta(days=CONFIG["venster_dagen"])
+    attacks, missed = [], []
+    kinds = {"oorlog": {"oorlogen": 0, "moest": 0, "aanv": 0, "sterren": 0, "drie": 0}, "cwl": {"oorlogen": 0, "moest": 0, "aanv": 0, "sterren": 0, "drie": 0}}
+    defence = {"keer": 0, "sterren": 0, "drie": 0}
+    for war in reversed(wars):
+        start = parse_time(war.get("start"))
+        if war["status"] == "preparation" or not start or start < cutoff:
+            continue
+        member = next((m for m in war["leden"] if m["tag"] == tag), None)
+        if not member:
+            continue
+        opponents = war.get("tegenLeden", {})
+        kind = kinds[war["soort"]]
+        kind["oorlogen"] += 1
+        kind["moest"] += war["aanvallenPerLid"] if war["status"] == "warEnded" else len(member["aanvallen"])
+        for attack in member["aanvallen"]:
+            target = opponents.get(attack.get("doel"), {})
+            kind["aanv"] += 1
+            kind["sterren"] += attack["sterren"]
+            kind["drie"] += attack["sterren"] == 3
+            attacks.append({
+                "datum": war["start"][:8], "clan": war["clan"].get("name"), "soort": war["soort"], "ronde": war.get("ronde"),
+                "tegen": war["tegenstander"].get("name"), "doel": target.get("naam"), "doelTh": target.get("th"), "eigenTh": member.get("th"),
+                "sterren": attack["sterren"], "procent": attack["procent"], "duur": attack.get("duur"),
+            })
+        if war["status"] == "warEnded" and len(member["aanvallen"]) < war["aanvallenPerLid"]:
+            missed.append({"datum": war["start"][:8], "clan": war["clan"].get("name"), "tegen": war["tegenstander"].get("name"), "soort": war["soort"], "aantal": war["aanvallenPerLid"] - len(member["aanvallen"])})
+        for attack in war.get("tegenAanvallen", []):
+            if attack.get("doel") == tag:
+                defence["keer"] += 1
+                defence["sterren"] += attack["sterren"]
+                defence["drie"] += attack["sterren"] == 3
+    return {
+        "tag": tag, "naam": raw["name"], "xp": raw.get("expLevel"), "trofeeen": raw.get("trophies"), "besteTrofeeen": raw.get("bestTrophies"),
+        "warSterren": raw.get("warStars"), "aanvalWinst": raw.get("attackWins"), "verdedigWinst": raw.get("defenseWins"),
+        "donaties": raw.get("donations"), "ontvangen": raw.get("donationsReceived"), "kapitaal": raw.get("clanCapitalContributions"),
+        "helden": pack(home(raw.get("heroes", []))),
+        "dieren": pack([x for x in home(raw.get("troops", [])) if x["name"] in PETS]),
+        "equipment": pack(sorted(home(raw.get("heroEquipment", [])), key=lambda x: -x["level"])),
+        "aanvallen": attacks, "gemist": missed, "perSoort": kinds, "verdediging": defence,
+        "beurten": stats.get(tag),
     }
 
 
@@ -560,7 +612,7 @@ def main():
     tags = list(dict.fromkeys(tags))
 
     previous = {p["tag"]: p for p in read_json(DATA / "latest.json", {}).get("players", [])}
-    players, failed, raw_sample = {}, [], {}
+    players, failed, raw_sample, raws = {}, [], {}, {}
     for tag in tags:
         try:
             raw = get("/players/" + tag_url(tag))
@@ -572,6 +624,7 @@ def main():
         if raw:
             raw_sample = raw_sample or raw
             players[tag] = summarize_player(raw)
+            raws[tag] = raw
         elif tag in previous:
             players[tag] = {**previous[tag], "verouderd": True}
         time.sleep(0.05)
@@ -698,6 +751,8 @@ def main():
         "oorlogen": summaries,
     })
     write_json(DATA / "api_check.json", api_check(clans, raw_sample))
+    for tag, raw in raws.items():
+        write_json(DATA / "speler" / (tag.strip("#") + ".json"), player_profile(tag, raw, wars, stats))
     print(f"{len(clans)} clans, {len(output)} spelers, {len(wars)} oorlogen bewaard, {len(failed)} mislukt")
 
 
