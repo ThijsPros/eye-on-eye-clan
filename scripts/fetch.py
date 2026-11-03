@@ -18,6 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "docs" / "data"
 WARS = DATA / "wars"
+CWL = DATA / "cwl"
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf8"))
 BASE = os.environ.get("COC_API_BASE", "https://cocproxy.royaleapi.dev/v1").rstrip("/")
 NOW = datetime.now(timezone.utc)
@@ -215,21 +216,58 @@ def collect_wars(clan):
     if not group or group.get("state") == "notInWar":
         return status
     status["cwl"] = {"seizoen": group.get("season"), "status": group.get("state")}
+    results = {}
     for number, round_ in enumerate(group.get("rounds", []), 1):
         for war_tag in round_.get("warTags", []):
             if war_tag == "#0":
                 continue
-            file_id = f"cwl-{safe_tag}-{war_tag.strip('#')}"
-            stored = read_json(WARS / (file_id + ".json"), None)
-            if stored and stored["status"] == "warEnded":
-                break
-            war = get("/clanwarleagues/wars/" + tag_url(war_tag))
-            if war and tag in (war["clan"].get("tag"), war["opponent"].get("tag")):
-                normalized = normalize_war(war, file_id, "cwl", tag, group.get("season"))
-                normalized["ronde"] = number
-                save_war(normalized)
-                break
+            file_id = war_tag.strip("#")
+            cached = read_json(CWL / (file_id + ".json"), None)
+            if not cached or cached["status"] != "warEnded":
+                war = get("/clanwarleagues/wars/" + tag_url(war_tag))
+                if not war:
+                    continue
+                cached = {
+                    "status": war["state"],
+                    "kanten": [
+                        {"tag": side.get("tag"), "sterren": side.get("stars") or 0, "procent": side.get("destructionPercentage") or 0}
+                        for side in (war["clan"], war["opponent"])
+                    ],
+                }
+                write_json(CWL / (file_id + ".json"), cached)
+                if tag in (war["clan"].get("tag"), war["opponent"].get("tag")):
+                    normalized = normalize_war(war, f"cwl-{safe_tag}-{file_id}", "cwl", tag, group.get("season"))
+                    normalized["ronde"] = number
+                    save_war(normalized)
+            if cached["status"] != "preparation":
+                results.setdefault(number, []).append(cached)
+    status["cwl"]["stand"] = cwl_table(group, results)
     return status
+
+
+def cwl_table(group, results):
+    """Tussenstand: sterren plus 10 per gewonnen ronde, daarna percentage."""
+    table = {
+        c["tag"]: {"tag": c["tag"], "naam": c["name"], "logo": (c.get("badgeUrls") or {}).get("medium"),
+                   "sterren": 0, "procent": 0, "winst": 0, "verlies": 0, "rondes": {}}
+        for c in group.get("clans", [])
+    }
+    for number, wars in results.items():
+        for war in wars:
+            a, b = war["kanten"]
+            done = war["status"] == "warEnded"
+            for own, other in ((a, b), (b, a)):
+                row = table.get(own["tag"])
+                if not row:
+                    continue
+                won = done and (own["sterren"], own["procent"]) > (other["sterren"], other["procent"])
+                lost = done and (own["sterren"], own["procent"]) < (other["sterren"], other["procent"])
+                row["sterren"] += own["sterren"] + (10 if won else 0)
+                row["procent"] = round(row["procent"] + own["procent"], 2)
+                row["winst"] += won
+                row["verlies"] += lost
+                row["rondes"][number] = {"sterren": own["sterren"], "uitslag": "w" if won else "v" if lost else "g" if done else "bezig"}
+    return sorted(table.values(), key=lambda r: (-r["sterren"], -r["procent"]))
 
 
 def clashking(path):
@@ -492,7 +530,8 @@ def main():
             log = {}
         # De officiele log geeft alleen de laatste 60 regels en daarna oude jaren.
         # Daarom vult ClashKing de tussenliggende oorlogen aan.
-        cutoff = min((e["endTime"] for e in log.get("items", []) if e["endTime"] >= f"{NOW.year - 1}"), default="")
+        regular = [e["endTime"] for e in log.get("items", []) if (e.get("opponent") or {}).get("tag") and e["endTime"] >= f"{NOW.year - 1}"]
+        cutoff = min(regular, default="")
         for entry in log.get("items", []):
             if entry["endTime"] < cutoff:
                 continue
@@ -500,7 +539,7 @@ def main():
             if entry.get("result") in ("win", "lose", "tie") and (entry.get("opponent") or {}).get("tag"):
                 results[entry["endTime"]] = {"win": "w", "lose": "v", "tie": "g"}[entry["result"]]
         # Binnen de log staat alles wat telt; wat er alleen bij ClashKing staat, is een vriendschappelijke oorlog.
-        official = {e["endTime"] for e in log.get("items", [])}
+        official = set(regular)
         counted = {end: value for end, value in results.items() if end < cutoff or end in official}
         status["ongeslagen"] = unbeaten_streak(counted)
     month = NOW.strftime("%Y-%m")

@@ -180,6 +180,10 @@ th .kp{display:block;padding:10px 8px}
 .sleutel input{flex:1 1 220px;max-width:420px}
 .knop.licht{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
 .knop[disabled]{opacity:.5;cursor:default}
+.cwlgroep{display:grid;gap:8px;min-width:0}
+.cwlstand tr.wij td{background:color-mix(in srgb,#2F7DE1 13%,var(--surface));font-weight:500}
+.rs{display:inline-block;min-width:26px;text-align:center;border-radius:4px;padding:1px 3px;font-size:14px;background:color-mix(in srgb,var(--muted) 16%,transparent)}
+.rs.w{background:#17804A;color:#fff}.rs.v{background:#C2332B;color:#fff}.rs.bezig{background:#2F7DE1;color:#fff}
 .melding{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--bad);border-radius:6px;padding:10px 14px;margin:0}
 footer{padding-block:0 28px;color:var(--muted);font-size:13px}
 
@@ -317,7 +321,13 @@ async function ververs(){if(!liveUrl||document.hidden||!D)return;
 function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="fresh" id="versheid">${versheid()}</p></div>
  <div class="front">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(kolom).join("")}</div>`}
 
-const overzichtView=()=>"";
+function overzichtView(){const c=[...D.clans].filter(x=>x.cwl?.stand?.length).sort((a,b)=>(a.nr||0)-(b.nr||0));if(!c.length)return"";
+ const rond=[1,2,3,4,5,6,7];
+ return `<section class="sectie"><h2>CWL-tussenstand</h2>${c.map(k=>`<article class="cwlgroep"><div class="vakkop">${schild(k.nr,32)}<h3>${esc(k.naam)}</h3><span class="teller">${esc((k.warLeague??"").replace(" League",""))}</span></div>
+ <div class="tablebox"><table class="cwlstand"><thead><tr><th><span class="kp">#</span></th><th><span class="kp">Clan</span></th>${rond.map(r=>`<th class="n opt"><span class="kp">${r}</span></th>`).join("")}<th class="n"><span class="kp">W-V</span></th><th class="n"><span class="kp">Sterren</span></th><th class="n"><span class="kp">Vernietigd</span></th></tr></thead><tbody>
+ ${k.cwl.stand.map((r,i)=>`<tr class="${r.tag===k.tag?"wij":""}"><td>${i+1}</td><td><div class="speler">${r.logo?`<img class="logo" src="${esc(r.logo)}" width="22" height="22" alt="" loading="lazy">`:""}<span class="sn">${esc(r.naam)}</span></div></td>
+ ${rond.map(n=>{const x=r.rondes[n];return `<td class="n opt">${x?`<span class="rs ${x.uitslag}">${x.sterren}</span>`:'<span class="weg">–</span>'}</td>`}).join("")}<td class="n">${r.winst}-${r.verlies}</td><td class="n ster">${r.sterren}</td><td class="n">${Math.round(r.procent)}%</td></tr>`).join("")}</tbody></table></div></article>`).join("")}
+ <p class="uitleg">Sterren zijn inclusief 10 extra per gewonnen ronde. Deze stand wordt elk uur bijgewerkt.</p></section>`}
 
 // Binnen 30 dagen na de eerste bekende oorlog is de echte datum onbekend: die speler zat er al.
 const maand=s=>{const[y,m]=s.split("-");return `${MND[m-1]} ${y}`};
