@@ -95,6 +95,7 @@ details.open summary{cursor:pointer;font-weight:500;color:var(--on-night);paddin
 .rust{margin:0;color:var(--on-night-soft)}
 
 main{display:block;padding-block:22px 40px}
+main:empty{padding-block:6px}
 .sectie{display:grid;gap:14px;min-width:0}
 .sectie+.sectie{margin-top:30px}
 .sectie>h2{font-size:26px}
@@ -109,7 +110,7 @@ main{display:block;padding-block:22px 40px}
 .feit{display:block;font-size:14px;color:var(--muted)}
 .feit b{display:block;font:500 17px/1.2 var(--body);color:var(--ink)}
 .feit b.ster{color:var(--star)}
-.waarschuwing{margin:0;padding:0 16px 12px;color:var(--bad);font-size:14px}
+.waarschuwing{margin:0;color:#FFB4AD;font-size:13px}
 .shield{display:block}
 
 .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -282,7 +283,7 @@ function rondeKnoppen(c,rondes,keuze){let r="";for(let i=1;i<=7;i++){const w=ron
  r+=`<button class="${k}" data-kclan="${esc(c.tag)}" data-ronde="${i}"${w?"":" disabled"} aria-label="Ronde ${i}, ${uitleg}" title="Ronde ${i}: ${uitleg}"${i===keuze?' aria-current="true"':""}>${i}</button>`}
  return `<div class="rondes">${r}</div>`}
 function kolom(c){const eigen=D.oorlogen.filter(w=>w.clan.tag===c.tag);let w,knoppen="";
- const kop=`<div class="kolkop">${schild(c.nr,56)}<div><h3>${esc(c.naam)}</h3><p>${esc(c.rol??"")}</p></div></div>`;
+ const kop=`<div class="kolkop">${schild(c.nr,56)}<h3>${esc(c.naam)}</h3></div>${c.oorlogslog==="privé"?'<p class="waarschuwing">Oorlogslog staat op privé. Zet die op openbaar om oorlogen te bewaren.</p>':""}`;
  const cwl=c.cwl?eigen.filter(x=>x.soort==="cwl"&&x.seizoen===c.cwl.seizoen):[];
  if(cwl.length){const rondes={};cwl.forEach(x=>rondes[x.ronde]=x);
   const nu=cwl.find(x=>x.status==="inWar")||cwl.find(x=>x.status==="preparation")||cwl.reduce((a,b)=>b.ronde>a.ronde?b:a);
@@ -314,11 +315,7 @@ async function ververs(){if(!liveUrl||document.hidden||!D)return;
 function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="fresh" id="versheid">${versheid()}</p></div>
  <div class="front">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(kolom).join("")}</div>`}
 
-function overzichtView(){return `<section class="sectie"><h2>Onze clans</h2><div class="clans">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map((c,i)=>{const sp=D.players.filter(p=>p.clanTag===c.tag&&gem(p)!=null);
- const g=sp.length?(sp.reduce((a,p)=>a+gem(p),0)/sp.length).toFixed(2):"–";
- return `<button class="clan" data-clan="${esc(c.tag)}" aria-label="Toon leden van ${esc(c.naam)}">${schild(c.nr??i+1,44)}<span class="kop"><span class="cn">${esc(c.naam)}</span><span class="rol">${esc(c.rol??"")}</span></span>
- <span class="feit"><b>${c.leden??"–"}</b>leden</span><span class="feit"><b>${esc((c.warLeague??"–").replace(" League",""))}</b>CWL-league</span><span class="feit"><b class="ster">${g}</b>gem. sterren</span></button>
- ${c.oorlogslog==="privé"?'<p class="waarschuwing">Oorlogslog van deze clan staat op privé. Zet die op openbaar om oorlogen te bewaren.</p>':""}`}).join("")}</div></section>`}
+const overzichtView=()=>"";
 
 function delta(v){return v==null?'<span class="d">–</span>':v===0?'<span class="d">±0</span>':`<span class="d ${v>0?"up":"down"}">${v>0?"+":""}${v}</span>`}
 function spark(p,i,label){const pts=p.s.map((x,j)=>x?[j,x[i]]:null).filter(q=>q&&q[1]!=null);if(pts.length<2)return"";
@@ -413,7 +410,6 @@ function tabel(){$("rijen").innerHTML=rijen();$("kop").innerHTML=kop();teller()}
 
 addEventListener("click",async e=>{const t=e.target.closest("[data-tab]");if(t){tab=t.dataset.tab;history.replaceState(null,"","#"+tab);render();return}
  const rd=e.target.closest("[data-ronde]");if(rd){const f=document.querySelector(".front")?.scrollLeft;rondeKeuze[rd.dataset.kclan]=+rd.dataset.ronde;render();document.querySelector(".front").scrollLeft=f;return}
- const cl=e.target.closest("[data-clan]");if(cl){clanFilter=cl.dataset.clan;tab="spelers";history.replaceState(null,"","#spelers");render();scrollTo(0,0);return}
  const k=e.target.closest("[data-k]");if(k){const c=k.dataset.k;if(sort.k===c)sort.dir*=-1;else sort={k:c,dir:c==="naam"?1:-1};tabel();return}
  const o=e.target.closest("[data-open]");if(o){const i=decodeURIComponent(o.dataset.open);open.has(i)?open.delete(i):open.add(i);tabel();return}
  const b=e.target.closest("[data-actie]");if(b){const a=b.dataset.actie;
