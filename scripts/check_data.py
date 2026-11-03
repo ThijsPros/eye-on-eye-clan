@@ -73,6 +73,10 @@ def main():
     if set((games_oud or {}).get("edities", {})) - set(games["edities"]):
         fouten.append("Er zijn Clan Games-edities verdwenen.")
 
+    rang, rang_oud = lees(DATA / "ranked.json"), eerder("docs/data/ranked.json")
+    if set((rang_oud or {}).get("weken", {})) - set(rang["weken"]):
+        fouten.append("Er zijn ranked-weken verdwenen.")
+
     for p in latest["players"]:
         if len(p["s"]) != len(maanden):
             fouten.append(f"Reeks heeft de verkeerde lengte: {p['tag']}")

@@ -27,6 +27,7 @@ BASE = os.environ.get("COC_API_BASE", "https://cocproxy.royaleapi.dev/v1").rstri
 NOW = datetime.now(timezone.utc)
 CLASHKING = "https://api.clashk.ing"
 ROMEINS = {1: "I", 2: "II", 3: "III", 4: "IV"}
+RANKED_START, RANKED_WEEK = 1793595600, 604800  # Maandag 05:00 UTC, zoals currentLeagueSeasonId.
 SUPER = {"Sneaky Goblin", "Inferno Dragon", "Ice Hound", "Rocket Balloon"}
 
 PETS = {
@@ -697,6 +698,41 @@ def catalogus_bijwerken(raws):
     write_json(pad, cat)
 
 
+def ranked_bijwerken(players, raws, leden, clan_tags):
+    """Ranked per week per lid. Battlelog geeft de laatste 50 gevechten, dus elke ronde aanvullen."""
+    pad = DATA / "ranked.json"
+    opslag = read_json(pad, {"weken": {}})
+    weken = opslag["weken"]
+    nu = int(NOW.timestamp())
+    week_nu = str(RANKED_START + (nu - RANKED_START) // RANKED_WEEK * RANKED_WEEK)
+    for tag in leden:
+        if tag not in raws or players[tag].get("clanTag") not in clan_tags:
+            continue
+        player, raw = players[tag], raws[tag]
+        try:
+            log = (get(f"/players/{tag_url(tag)}/battlelog") or {}).get("items", [])
+        except ApiError:
+            continue
+        momenten = [int(parse_time(b["battleTimestamp"]).timestamp()) for b in log if b.get("battleTimestamp")]
+        oudste = min(momenten) if momenten else nu
+        for b, moment in zip((b for b in log if b.get("battleTimestamp")), momenten):
+            if not b.get("attack") or b.get("battleType") not in ("ranked", "legend"):
+                continue
+            week = str(RANKED_START + (moment - RANKED_START) // RANKED_WEEK * RANKED_WEEK)
+            regel = weken.setdefault(week, {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
+            regel["aanv"][str(moment)] = [b.get("stars", 0), b.get("destructionPercentage", 0)]
+        regel = weken.setdefault(week_nu, {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
+        groep = raw.get("currentLeagueGroupTag")
+        regel.update(naam=player["naam"], clan=player.get("clanTag"), lgn=player["lgn"] or None, league=player["league"],
+                     groep=bool(groep and groep != "#0"), trofeeen=player.get("trofeeen"))
+        regel.setdefault("lgnStart", player["lgn"] or None)
+        for week, inhoud in weken.items():
+            if tag in inhoud["spelers"] and oudste <= int(week):
+                inhoud["spelers"][tag]["volledig"] = True
+        time.sleep(0.05)
+    write_json(pad, opslag)
+
+
 def stand_bijwerken(series, month, earlier, current, stale=False):
     """De eerste meting van een maand staat vast. Geeft de groei sinds die stand en de leaguewissel."""
     if not stale and month not in series:
@@ -984,6 +1020,7 @@ def main():
 
     write_json(DATA / "history.json", history)
     roof_bijwerken(clans)
+    ranked_bijwerken(players, raws, leden, clan_tags)
     catalogus_bijwerken(raws)
     games_bijwerken(players, clan_tags)
     maand_dagen = CONFIG["maand_venster_dagen"]
@@ -1028,6 +1065,7 @@ def main():
         "eersteOorlog": wars[0]["start"][:8] if wars else None,
         "grensAanvallen": CONFIG["grens_aanvallen"],
         "gamesDoel": CONFIG["clangames_doel"],
+        "rankedLimiet": CONFIG["ranked_limieten"],
         "clans": clan_status,
         "players": output,
         "oorlogen": summaries,

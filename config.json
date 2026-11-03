@@ -21,5 +21,20 @@
   "grens_aanvallen": 18,
   "bij_ons_sinds": {},
   "maand_venster_dagen": 120,
-  "clangames_doel": 4000
+  "clangames_doel": 4000,
+  "ranked_limieten": {
+    "Skeleton": 6,
+    "Barbarian": 6,
+    "Archer": 8,
+    "Wizard": 8,
+    "Valkyrie": 10,
+    "Witch": 10,
+    "Golem": 12,
+    "P.E.K.K.A": 12,
+    "Titan": 14,
+    "Dragon": 18,
+    "Electro": 24,
+    "Legend III": 24,
+    "Legend II": 30
+  }
 }
