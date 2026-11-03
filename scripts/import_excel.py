@@ -101,8 +101,7 @@ def lees(pad, clan, uit):
             if soort == "maand":
                 s.update(naam=r.get("Speler"), th=heel(r.get("TH") or r.get("TH level")),
                          helden=heel(r.get("Helden") or r.get("Heldenlevels")), dieren=heel(r.get("Dieren") or r.get("Dierenlevels")),
-                         equip=heel(r.get("Equipment")), plek=r.get("Plek"), keuze=r.get("Keuze leiding"),
-                         aanmelding=r.get("Aanmelding in app"))
+                         equip=heel(r.get("Equipment")), plek=r.get("Plek"))
                 if maand != "2025-10":  # Toen gold nog het oude trofeeënsysteem.
                     s["league"] = r.get("League")
             elif soort == "leden":
@@ -133,6 +132,12 @@ def tekst(v):
         v = v.strip()
         return v[0].upper() + v[1:]
     return int(v) if float(v).is_integer() else v
+
+
+def plek(v):
+    """Alleen een plek of reserve; opmerkingen als Nee of Clan 2? blijven weg."""
+    v = tekst(v)
+    return v if v == "Reserve" or isinstance(v, (int, float)) else None
 
 
 def samenvoegen(per_clan):
@@ -178,7 +183,7 @@ def main():
             w = r.get("war") or {}
             detail[m] = {k: v for k, v in {
                 "naam": r.get("naam"), "lijst": r["lijst"], "th": r.get("th"), "xp": r.get("xp"), "league": r.get("league"),
-                "plek": tekst(r.get("plek")), "keuze": tekst(r.get("keuze")), "aanmelding": tekst(r.get("aanmelding")),
+                "plek": plek(r.get("plek")),
                 **w, "heldenLvl": r.get("heldenLvl"), "dierenLvl": r.get("dierenLvl"), "equipLvl": r.get("equipLvl"),
             }.items() if v not in (None, {})}
         (map_ / f"{tag[1:]}.json").write_text(json.dumps(detail, ensure_ascii=False, separators=(",", ":")))
