@@ -182,8 +182,12 @@ th .kp{display:block;padding:10px 8px}
 .knop[disabled]{opacity:.5;cursor:default}
 .cwlgroep{display:grid;gap:8px;min-width:0}
 .cwlstand tr.wij td{background:color-mix(in srgb,#2F7DE1 13%,var(--surface));font-weight:500}
-.rs{display:inline-block;min-width:26px;text-align:center;border-radius:4px;padding:1px 3px;font-size:14px;background:color-mix(in srgb,var(--muted) 16%,transparent)}
-.rs.w{background:#17804A;color:#fff}.rs.v{background:#C2332B;color:#fff}.rs.bezig{background:#2F7DE1;color:#fff}
+.rs{display:inline-grid;min-width:32px;text-align:center;border-radius:4px;padding:2px 3px;background:color-mix(in srgb,var(--muted) 18%,transparent)}
+.rs b{font-weight:500;font-size:15px;line-height:1.1}.rs small{font-size:11px;line-height:1.1;opacity:.85}
+.rs.w{background:#17804A;color:#fff}.rs.g{background:#6B7488;color:#fff}.rs.v{background:#C2332B;color:#fff}.rs.bezig{background:#2F7DE1;color:#fff}
+.plek{white-space:nowrap}.pijl{display:inline-block;width:14px;color:var(--muted)}
+.cwlstand tr.op .pijl{color:var(--good)}.cwlstand tr.neer .pijl{color:var(--bad)}
+.cwlstand tr.op td:first-child{box-shadow:inset 4px 0 0 var(--good)}.cwlstand tr.neer td:first-child{box-shadow:inset 4px 0 0 var(--bad)}
 .melding{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--bad);border-radius:6px;padding:10px 14px;margin:0}
 footer{padding-block:0 28px;color:var(--muted);font-size:13px}
 
@@ -322,13 +326,18 @@ async function ververs(){if(!liveUrl||document.hidden||!D)return;
 function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="fresh" id="versheid">${versheid()}</p></div>
  <div class="front">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(kolom).join("")}</div>`}
 
+// Promotie en degradatie per league: Clash of Clans Wiki, Champion II volgens ClashSpot.
+function plekken(l){l=(l||"").replace(" League","");if(l==="Bronze III")return [3,0];if(l==="Bronze II"||l==="Bronze I")return [3,2];if(l==="Champion I")return [0,2];if(l==="Champion II")return [1,2];return [2,2]}
 function overzichtView(){const c=[...D.clans].filter(x=>x.cwl?.stand?.length).sort((a,b)=>(a.nr||0)-(b.nr||0));if(!c.length)return"";
- const rond=[1,2,3,4,5,6,7];
- return `<section class="sectie"><h2>CWL-tussenstand</h2>${c.map(k=>`<article class="cwlgroep"><div class="vakkop">${schild(k.nr,32)}<h3>${esc(k.naam)}</h3><span class="teller">${esc((k.warLeague??"").replace(" League",""))}</span></div>
- <div class="tablebox"><table class="cwlstand"><thead><tr><th><span class="kp">#</span></th><th><span class="kp">Clan</span></th>${rond.map(r=>`<th class="n opt"><span class="kp">${r}</span></th>`).join("")}<th class="n"><span class="kp">W-V</span></th><th class="n"><span class="kp">Sterren</span></th><th class="n"><span class="kp">Vernietigd</span></th></tr></thead><tbody>
- ${k.cwl.stand.map((r,i)=>`<tr class="${r.tag===k.tag?"wij":""}"><td>${i+1}</td><td><div class="speler">${r.logo?`<img class="logo" src="${esc(r.logo)}" width="22" height="22" alt="" loading="lazy">`:""}<span class="sn">${esc(r.naam)}</span></div></td>
- ${rond.map(n=>{const x=r.rondes[n];return `<td class="n opt">${x?`<span class="rs ${x.uitslag}">${x.sterren}</span>`:'<span class="weg">–</span>'}</td>`}).join("")}<td class="n">${r.winst}-${r.verlies}</td><td class="n ster">${r.sterren}</td><td class="n">${Math.round(r.procent)}%</td></tr>`).join("")}</tbody></table></div></article>`).join("")}
- <p class="uitleg">Sterren zijn inclusief 10 extra per gewonnen ronde. Deze stand wordt elk uur bijgewerkt.</p></section>`}
+ const rond=[1,2,3,4,5,6,7],getal=v=>Math.round(v||0).toLocaleString("nl-NL");
+ return `<section class="sectie"><h2>CWL-tussenstand</h2>${c.map(k=>{const[op,neer]=plekken(k.warLeague),n=k.cwl.stand.length;
+ return `<article class="cwlgroep"><div class="vakkop">${schild(k.nr,32)}<h3>${esc(k.naam)}</h3><span class="teller">${esc((k.warLeague??"").replace(" League",""))}</span></div>
+ <div class="tablebox"><table class="cwlstand"><thead><tr><th><span class="kp">#</span></th><th><span class="kp">Clan</span></th>${rond.map(r=>`<th class="n opt"><span class="kp">${r}</span></th>`).join("")}<th class="n opt"><span class="kp">Aanv.</span></th><th class="n"><span class="kp">Vernietigd</span></th><th class="n opt"><span class="kp">Sterren</span></th><th class="n opt"><span class="kp">Bonus</span></th><th class="n"><span class="kp">Totaal</span></th><th class="n opt"><span class="kp">3★</span></th><th class="n opt"><span class="kp">2★</span></th><th class="n opt"><span class="kp">1★</span></th><th class="n opt"><span class="kp">0★</span></th></tr></thead><tbody>
+ ${k.cwl.stand.map((r,i)=>{const pos=i<op?"op":i>=n-neer?"neer":"",t=(r.sterren||0)+(r.bonus||0),v=r.verdeling||[0,0,0,0];
+ return `<tr class="${r.tag===k.tag?"wij ":""}${pos}"><td class="plek"><span class="pijl" aria-label="${pos==="op"?"Promotie":pos==="neer"?"Degradatie":"Blijft"}">${pos==="op"?"▲":pos==="neer"?"▼":"–"}</span> ${i+1}</td><td><div class="speler">${r.logo?`<img class="logo" src="${esc(r.logo)}" width="22" height="22" alt="" loading="lazy">`:""}<span class="sn">${esc(r.naam)}</span></div></td>
+ ${rond.map(x=>{const y=r.rondes[x];return `<td class="n opt">${y?`<span class="rs ${y.uitslag}"><b>${y.sterren}</b><small>${y.aanvallen??0}</small></span>`:'<span class="weg">–</span>'}</td>`}).join("")}
+ <td class="n opt">${r.aanvallen??0}</td><td class="n">${getal(r.vernietigd)}</td><td class="n opt">${r.sterren}</td><td class="n opt">+${r.bonus||0}</td><td class="n ster">${t}</td><td class="n opt">${v[0]}</td><td class="n opt">${v[1]}</td><td class="n opt">${v[2]}</td><td class="n opt">${v[3]}</td></tr>`}).join("")}</tbody></table></div></article>`}).join("")}
+ <p class="uitleg">Per ronde staan de sterren met daaronder de gebruikte aanvallen. Groen is gewonnen, grijs gelijk, rood verloren en blauw bezig. Totaal is sterren plus 10 per gewonnen ronde; bij gelijke stand beslist Vernietigd. ▲ is promotie, ▼ degradatie. Deze stand wordt elk uur bijgewerkt.</p></section>`}
 
 // Binnen 30 dagen na de eerste bekende oorlog is de echte datum onbekend: die speler zat er al.
 const maand=s=>{const[y,m]=s.split("-");return `${MND[m-1]} ${y}`};

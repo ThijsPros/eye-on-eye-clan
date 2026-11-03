@@ -229,8 +229,16 @@ def collect_wars(clan):
                     continue
                 cached = {
                     "status": war["state"],
+                    "grootte": war.get("teamSize"),
                     "kanten": [
-                        {"tag": side.get("tag"), "sterren": side.get("stars") or 0, "procent": side.get("destructionPercentage") or 0}
+                        {
+                            "tag": side.get("tag"), "sterren": side.get("stars") or 0, "procent": side.get("destructionPercentage") or 0,
+                            "aanvallen": side.get("attacks", sum(len(m.get("attacks", [])) for m in side.get("members", []))),
+                            "verdeling": [
+                                sum(a["stars"] == stars for m in side.get("members", []) for a in m.get("attacks", []))
+                                for stars in (3, 2, 1, 0)
+                            ],
+                        }
                         for side in (war["clan"], war["opponent"])
                     ],
                 }
@@ -249,7 +257,8 @@ def cwl_table(group, results):
     """Tussenstand: sterren plus 10 per gewonnen ronde, daarna percentage."""
     table = {
         c["tag"]: {"tag": c["tag"], "naam": c["name"], "logo": (c.get("badgeUrls") or {}).get("medium"),
-                   "sterren": 0, "procent": 0, "winst": 0, "verlies": 0, "rondes": {}}
+                   "sterren": 0, "bonus": 0, "vernietigd": 0, "aanvallen": 0, "verdeling": [0, 0, 0, 0],
+                   "winst": 0, "verlies": 0, "gelijk": 0, "rondes": {}}
         for c in group.get("clans", [])
     }
     for number, wars in results.items():
@@ -262,12 +271,20 @@ def cwl_table(group, results):
                     continue
                 won = done and (own["sterren"], own["procent"]) > (other["sterren"], other["procent"])
                 lost = done and (own["sterren"], own["procent"]) < (other["sterren"], other["procent"])
-                row["sterren"] += own["sterren"] + (10 if won else 0)
-                row["procent"] = round(row["procent"] + own["procent"], 2)
+                tied = done and not won and not lost
+                row["sterren"] += own["sterren"]
+                row["bonus"] += 10 if won else 0
+                row["vernietigd"] = round(row["vernietigd"] + own["procent"] * (war.get("grootte") or 0), 1)
+                row["aanvallen"] += own.get("aanvallen", 0)
+                row["verdeling"] = [x + y for x, y in zip(row["verdeling"], own.get("verdeling", [0, 0, 0, 0]))]
                 row["winst"] += won
                 row["verlies"] += lost
-                row["rondes"][number] = {"sterren": own["sterren"], "uitslag": "w" if won else "v" if lost else "g" if done else "bezig"}
-    return sorted(table.values(), key=lambda r: (-r["sterren"], -r["procent"]))
+                row["gelijk"] += tied
+                row["rondes"][number] = {
+                    "sterren": own["sterren"], "aanvallen": own.get("aanvallen", 0),
+                    "uitslag": "w" if won else "v" if lost else "g" if done else "bezig",
+                }
+    return sorted(table.values(), key=lambda r: (-(r["sterren"] + r["bonus"]), -r["vernietigd"]))
 
 
 def clashking(path):
