@@ -715,6 +715,10 @@ def ranked_bijwerken(players, raws, leden, clan_tags):
             continue
         momenten = [int(parse_time(b["battleTimestamp"]).timestamp()) for b in log if b.get("battleTimestamp")]
         oudste = min(momenten) if momenten else nu
+        laatst = opslag.setdefault("laatst", {})
+        for b, moment in zip((b for b in log if b.get("battleTimestamp")), momenten):
+            if b.get("battleType") in ("ranked", "legend"):
+                laatst[tag] = max(laatst.get(tag, 0), moment)
         for b, moment in zip((b for b in log if b.get("battleTimestamp")), momenten):
             if b.get("battleType") not in ("ranked", "legend") or (not b.get("attack") and b["battleType"] != "legend"):
                 continue
@@ -1069,6 +1073,7 @@ def main():
         "grensAanvallen": CONFIG["grens_aanvallen"],
         "gamesDoel": CONFIG["clangames_doel"],
         "rankedLimiet": CONFIG["ranked_limieten"],
+        "rankedVrij": CONFIG["ranked_veilige_weken"],
         "clans": clan_status,
         "players": output,
         "oorlogen": summaries,
