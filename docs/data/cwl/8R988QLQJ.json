@@ -1,1 +1,1 @@
-{"status":"inWar","grootte":15,"kanten":[{"tag":"#2GUC0V022","sterren":43,"procent":97.93333333333334,"aanvallen":15,"max":43,"verdeling":[13,2,0,0]},{"tag":"#2RRLRVLUG","sterren":44,"procent":99.53333333333333,"aanvallen":15,"max":44,"verdeling":[14,1,0,0]}]}
+{"status":"inWar","grootte":15,"kanten":[{"tag":"#2GUC0V022","sterren":43,"procent":97.93333333333334,"aanvallen":15,"max":43,"maxPct":97.93,"verdeling":[13,2,0,0]},{"tag":"#2RRLRVLUG","sterren":44,"procent":99.53333333333333,"aanvallen":15,"max":44,"maxPct":99.53,"verdeling":[14,1,0,0]}]}
