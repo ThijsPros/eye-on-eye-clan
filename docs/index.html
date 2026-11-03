@@ -326,8 +326,8 @@ async function ververs(){if(!liveUrl||document.hidden||!D)return;
 function muur(){return `<div class="warhead"><h2>Status oorlogen</h2><p class="fresh" id="versheid">${versheid()}</p></div>
  <div class="front">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(kolom).join("")}</div>`}
 
-// Promotie en degradatie per league: hoofdtabel Clash of Clans Wiki, Master en Champion II volgens ClashSpot.
-function plekken(l){l=(l||"").replace(" League","");if(l==="Bronze III")return [3,0];if(l==="Bronze II"||l==="Bronze I")return [3,2];if(l==="Champion I")return [0,2];if(l==="Champion II"||l.startsWith("Master"))return [1,2];return [2,2]}
+// Promotie en degradatie per league: Clash of Clans Wiki, vanaf Master volgens ClashSpot. Legend is de hoogste league.
+function plekken(l){l=(l||"").replace(" League","");if(l==="Bronze III")return [3,0];if(l==="Bronze II"||l==="Bronze I")return [3,2];if(l==="Legend")return [0,2];if(/^(Master|Champion|Titan)/.test(l))return [1,2];return [2,2]}
 function overzichtView(){const c=[...D.clans].filter(x=>x.cwl?.stand?.length).sort((a,b)=>(a.nr||0)-(b.nr||0));if(!c.length)return"";
  const rond=[1,2,3,4,5,6,7],getal=v=>Math.round(v||0).toLocaleString("nl-NL");
  return `<section class="sectie"><h2>CWL-tussenstand</h2>${c.map(k=>{const[op,neer]=plekken(k.warLeague),n=k.cwl.stand.length;
