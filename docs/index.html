@@ -320,7 +320,7 @@ const overzichtView=()=>"";
 // Binnen 30 dagen na de eerste bekende oorlog is de echte datum onbekend: die speler zat er al.
 const maand=s=>{const[y,m]=s.split("-");return `${MND[m-1]} ${y}`};
 function sindsTekst(p){if(!p.sinds)return"–";if(p.sindsVast)return /^\d{4}$/.test(p.sinds)?p.sinds:maand(p.sinds);
- const b=new Date(D.sindsBegin);if((new Date(p.sinds)-b)/864e5<=30)return `Vóór ${MND[b.getUTCMonth()]} ${b.getUTCFullYear()}`;return (p.sindsExact?"":"ca. ")+maand(p.sinds)}
+ const b=new Date(D.sindsBegin);if((new Date(p.sinds)-b)/864e5<=30)return `Vóór ${MND[b.getUTCMonth()]} ${b.getUTCFullYear()}`;return maand(p.sinds)}
 function delta(v){return v==null?'<span class="d">–</span>':v===0?'<span class="d">±0</span>':`<span class="d ${v>0?"up":"down"}">${v>0?"+":""}${v}</span>`}
 function spark(p,i,label){const pts=p.s.map((x,j)=>x?[j,x[i]]:null).filter(q=>q&&q[1]!=null);if(pts.length<2)return"";
  const vs=pts.map(q=>q[1]),a=Math.min(...vs),b=Math.max(...vs),n=p.s.length-1,X=j=>3+j*134/n,Y=v=>34-(v-a)/(b-a||1)*30,l=pts[pts.length-1];
@@ -341,7 +341,7 @@ function rijen(){return zichtbaar().map(p=>{const d=p.d||{},m=p.cw?.moest??0,mis
  <td class="n"><span class="tal ${laag(p)?"bad":""}">${m}</span></td><td class="n"><span class="${mis?"tal bad":""}">${mis}</span></td><td class="n ster">${gem(p)!=null?gem(p).toFixed(2):"–"}</td></tr>${open.has(p.tag)?detail(p,COLS.length):""}`}).join("")}
 function kop(){return COLS.map(([k,t,n,o,kort])=>`<th class="${n?"n ":""}${o?"opt":""}" aria-sort="${sort.k===k?(sort.dir>0?"ascending":"descending"):"none"}"><button data-k="${k}">${kort?`<span class="lang">${t}</span><span class="kort">${kort}</span>`:t}</button></th>`).join("")}
 function spelersView(){return `<section class="sectie"><h2>Alle leden</h2>
- <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Rood bij Moest doen is minder dan ${D.grensAanvallen} aanvallen. ${D.maanden.length<2?"Groei per maand zie je vanaf volgende maand.":"Groen en rood onder een getal is de groei sinds vorige maand."} Bij ons sinds is de eerste bekende join in een van onze clans; ca. is een schatting op basis van de eerste oorlog. De geschiedenis begint in ${MND[new Date(D.sindsBegin).getUTCMonth()]} ${new Date(D.sindsBegin).getUTCFullYear()}. Tik op een naam voor meer.</p>
+ <p class="uitleg">Aanvallen over de laatste ${D.vensterDagen} dagen, in al onze clans samen. Rood bij Moest doen is minder dan ${D.grensAanvallen} aanvallen. ${D.maanden.length<2?"Groei per maand zie je vanaf volgende maand.":"Groen en rood onder een getal is de groei sinds vorige maand."} Bij ons sinds is de eerste bekende maand in een van onze clans. De geschiedenis begint in ${MND[new Date(D.sindsBegin).getUTCMonth()]} ${new Date(D.sindsBegin).getUTCFullYear()}. Tik op een naam voor meer.</p>
  <div class="tools"><input id="zoek" type="search" placeholder="Zoek lid" aria-label="Zoek lid" value="${esc(zoek)}">
  <select id="clanf" aria-label="Filter op clan"><option value="">Alle clans</option>${D.clans.map(c=>`<option value="${esc(c.tag)}"${clanFilter===c.tag?" selected":""}>${esc(c.naam)}</option>`).join("")}<option value="uit"${clanFilter==="uit"?" selected":""}>Buiten onze clans</option></select>
  <select id="filter" aria-label="Filter spelers"><option value="">Alle leden</option><option value="laag"${filter==="laag"?" selected":""}>Onder ${D.grensAanvallen} aanvallen</option><option value="gemist"${filter==="gemist"?" selected":""}>Met gemiste aanvallen</option></select>
