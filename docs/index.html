@@ -302,6 +302,9 @@ a.knop{text-decoration:none;display:inline-block}
 .rtools select{max-width:100%;min-width:0}
 .histvak{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px;align-items:start}
 .histvak .vak{margin:0}
+.recbox th:first-child,.recbox td:first-child{width:64px}
+.recbox td:nth-child(2),.recbox th:nth-child(2){text-align:left;padding-left:14px}
+.recvak{grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr))}
 .recons>td{background:rgb(255 201 60/.16)}
 .recbadge{vertical-align:-5px;margin-right:6px}
 .rbox th{white-space:nowrap}
@@ -823,9 +826,9 @@ function recordsView(){evLaad(recData,"data/records.json",d=>recData=d);const ko
  clans.forEach(c=>{const w=eigen[c.tag]?.[soort];if(!rijen.some(r=>r.t===c.tag)&&w!=null&&lijst.length)rijen.push({p:recPlek(lijst,w,c.tag),t:c.tag,n:c.naam,w,l:eigen[c.tag]?.niveau,uit:true})});
  const eerst=rijen.filter(r=>!r.uit),uit=rijen.filter(r=>r.uit).sort((a,b)=>b.w-a.w),rij=r=>`<tr class="${ons.has(r.t)?"recons":""}"><td class="n">${r.p?`#${r.p}`:"–"}</td><td>${r.b?`<img src="${esc(r.b)}" width="20" height="20" alt="" class="recbadge" loading="lazy">`:ons.has(r.t)?schild(clanVan(r.t)?.nr,20):""}${esc(r.n)}</td><td class="n opt">${r.l??"–"}</td>${recScope==="wereld"?`<td class="opt">${esc(r.c??"–")}</td>`:""}<td class="n"><b>${getal(r.w)}</b></td></tr>`;
  return `${kop}<div class="rschakel" role="group" aria-label="Gebied"><button class="knop ${recScope==="nl"?"":"licht"}" data-rec="nl">Nederland</button><button class="knop ${recScope==="wereld"?"":"licht"}" data-rec="wereld">Wereld</button></div>
- <div class="vakken histvak">${clans.map(kaart).join("")}</div>
+ <div class="vakken histvak recvak">${clans.map(kaart).join("")}</div>
  <div class="chips schuif">${Object.keys(REC).filter(k=>s[k]).map(k=>chip("recs",k,REC[k],soort)).join("")}</div>
- ${lijst.length?`<div class="tablebox"><table><thead><tr><th class="n">Plek</th><th>Clan</th><th class="n opt">Level</th>${recScope==="wereld"?'<th class="opt">Land</th>':""}<th class="n">${REC[soort]}</th></tr></thead><tbody>${eerst.map(rij).join("")}${uit.map(rij).join("")}</tbody></table></div>`:'<p class="uitleg">Geen ranglijst beschikbaar.</p>'}
+ ${lijst.length?`<div class="tablebox recbox"><table><thead><tr><th class="n">Plek</th><th>Clan</th><th class="n opt">Level</th>${recScope==="wereld"?'<th class="opt">Land</th>':""}<th class="n">${REC[soort]}</th></tr></thead><tbody>${eerst.map(rij).join("")}${uit.map(rij).join("")}</tbody></table></div>`:'<p class="uitleg">Geen ranglijst beschikbaar.</p>'}
  <p class="uitleg">${soort==="reeks"?`Winreeks kent alleen de 1.000 beste clans van de wereld, dus ${recScope==="nl"?"in Nederland staan hier alleen de clans daaruit":"dit is de top daarvan"}.`:`De ranglijst toont de top ${lijst.length||200} van ${land}.`} Staan we daarbuiten, dan staan onze clans onderaan zonder plek. Winreeks en capital gold komen van ClashKing, de rest uit de officiële API.</p></section>`}
 function roofVolgende(){const d=new Date;d.setUTCHours(7,0,0,0);d.setUTCDate(d.getUTCDate()+((5-d.getUTCDay()+7)%7));if(d<=new Date)d.setUTCDate(d.getUTCDate()+7);return d}
 function roofView(){evLaad(roofData,"data/roof.json",d=>roofData=d);const kop=`<section class="sectie"><h2>Roofweekend</h2>`;if(!roofData)return kop+'<p class="uitleg">Laden…</p></section>';
