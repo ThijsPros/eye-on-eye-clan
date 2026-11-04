@@ -1,0 +1,32 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          python3 - <<'P'
+          import json,os,urllib.request,urllib.error
+          def g(u,h={},t=45):
+              r=urllib.request.Request(u,headers={"User-Agent":"eye-on-eye-clan",**h})
+              try:
+                  x=urllib.request.urlopen(r,timeout=t);return x.status,json.load(x)
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read()[:200]
+              except Exception as e:
+                  return str(e)[:60],None
+          K={"Authorization":"Bearer "+os.environ["COC_API_KEY"]}
+          B="https://cocproxy.royaleapi.dev/v1";C="https://api.clashk.ing"
+          s,d=g(B+"/locations?limit=300",K);nl=[x for x in d["items"] if x.get("countryCode")=="NL"];print("LOC",s,nl)
+          L=nl[0]["id"]
+          for u in [f"/locations/{L}/rankings/clans?limit=2",f"/locations/global/rankings/clans?limit=2",f"/locations/{L}/rankings/capitals?limit=2",f"/locations/global/rankings/capitals?limit=2",f"/locations/{L}/rankings/clans-builder-base?limit=1"]:
+              s,d=g(B+u,K);print("API",u,s,json.dumps(d["items"][0])[:420] if s==200 and d.get("items") else str(d)[:120])
+          s,d=g(B+f"/locations/{L}/rankings/clans?limit=200",K);print("NLN",len(d["items"]),d["items"][-1]["clanPoints"],[ (x["rank"],x["name"]) for x in d["items"] if x["tag"] in("#PYQ2RLCQ","#2RGYGLVC0")])
+          o=g(C+"/openapi.json")[1]
+          for q in ["/v2/leaderboard/{locationId}/clan/war-wins","/v2/leaderboard/clan/win-streak","/v2/leaderboard/{locationId}/clan/capital-gold","/v2/leaderboard/{locationId}/clan/donations","/v2/clan/{clanTag}/records","/v2/clan/{tag}/rankings","/v2/leaderboard/cwl/{leagueId}"]:
+              d=o["paths"][q]["get"];print("OP",q,(d.get("summary") or "")[:110],[(x.get("name"),x.get("required")) for x in d.get("parameters",[])])
+          for u in [f"/v2/leaderboard/{L}/clan/war-wins?limit=3","/v2/leaderboard/global/clan/war-wins?limit=3","/v2/leaderboard/clan/win-streak?limit=3",f"/v2/leaderboard/clan/win-streak?locationId={L}&limit=3",f"/v2/leaderboard/{L}/clan/capital-gold?limit=3",f"/v2/leaderboard/{L}/clan/donations?limit=3","/v2/clan/%23PYQ2RLCQ/records","/v2/clan/%23PYQ2RLCQ/rankings","/v2/clan/search?name=eye%20on%20eye&limit=1"]:
+              s,d=g(C+u);print("CK",u,s,json.dumps(d)[:750] if isinstance(d,(dict,list)) else d)
+          P
