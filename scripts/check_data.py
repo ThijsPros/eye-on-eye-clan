@@ -25,6 +25,42 @@ def vorm(v):
     return vol[:3] + [vol[3] or None] + vol[4:]
 
 
+def geen_krimp(hist, oud, rang, rang_oud, roof, roof_oud, games, games_oud):
+    """Bewaarde data mag alleen groeien. Elke afname stopt het opslaan."""
+    gewist = subprocess.run(["git", "ls-files", "--deleted", "docs/data"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+    if gewist:
+        fouten.append(f"{len(gewist)} databestanden verdwenen, bijvoorbeeld {gewist[0]}")
+    for sleutel in ("eerst", "laatst", "cwlLeague", "clans"):
+        if set((oud or {}).get(sleutel, {})) - set(hist.get(sleutel, {})):
+            fouten.append(f"Gegevens verdwenen uit history.json: {sleutel}")
+    if set((oud or {}).get("spelers", {})) - set(hist["spelers"]):
+        fouten.append("Er zijn spelers verdwenen.")
+    for week, inhoud in (rang_oud or {}).get("weken", {}).items():
+        nieuw = rang["weken"].get(week, {}).get("spelers", {})
+        for tag, regel in inhoud["spelers"].items():
+            for soort in ("aanv", "verd"):
+                if set(regel.get(soort, {})) - set(nieuw.get(tag, {}).get(soort, {})):
+                    fouten.append(f"Ranked-gevechten verdwenen: {tag} week {week}")
+    for tag, moment in (rang_oud or {}).get("laatst", {}).items():
+        if rang.get("laatst", {}).get(tag, 0) < moment:
+            fouten.append(f"Laatste ranked-activiteit teruggezet: {tag}")
+    for sleutel, weekend in (roof_oud or {}).get("weekenden", {}).items():
+        if len(roof["weekenden"].get(sleutel, {}).get("leden", [])) < len(weekend.get("leden", [])):
+            fouten.append(f"Roofweekend-deelnemers verdwenen: {sleutel}")
+    for maand, editie in (games_oud or {}).get("edities", {}).items():
+        for veld in ("basis", "stand"):
+            if set(editie.get(veld, {})) - set(games["edities"].get(maand, {}).get(veld, {})):
+                fouten.append(f"Clanspelen-gegevens verdwenen: {maand}")
+    archief, archief_oud = lees(DATA / "archief.json"), eerder("docs/data/archief.json")
+    for clan, rijen in (archief_oud or {}).items():
+        if len(archief.get(clan, [])) < len(rijen) * 0.98:
+            fouten.append(f"Oorlogsarchief kromp: {clan}")
+    for pad in (DATA / "historie").glob("*.json"):
+        detail = eerder(f"docs/data/historie/{pad.name}")
+        if detail and set(detail) - set(lees(pad)):
+            fouten.append(f"Maanden verdwenen uit {pad.name}")
+
+
 def main():
     tekst = (ROOT / "data" / "excel-basis.json").read_bytes()
     if hashlib.sha256(tekst).hexdigest() != (ROOT / "data" / "excel-basis.sha256").read_text().strip():
@@ -76,6 +112,8 @@ def main():
     rang, rang_oud = lees(DATA / "ranked.json"), eerder("docs/data/ranked.json")
     if set((rang_oud or {}).get("weken", {})) - set(rang["weken"]):
         fouten.append("Er zijn ranked-weken verdwenen.")
+
+    geen_krimp(hist, oud, rang, rang_oud, roof, roof_oud, games, games_oud)
 
     for p in latest["players"]:
         if len(p["s"]) != len(maanden):

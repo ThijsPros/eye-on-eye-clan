@@ -83,8 +83,14 @@ def tag_url(tag):
     return urllib.parse.quote(tag, safe="")
 
 
-def read_json(path, default):
-    return json.loads(path.read_text(encoding="utf8")) if path.exists() else default
+def read_json(path, default=None):
+    """Een ontbrekend bestand geeft de standaard. Een kapot bestand stopt de ronde, zodat het nooit leeg wordt overschreven."""
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf8"))
+    except ValueError:
+        sys.exit(f"Kapot databestand: {path}. Ronde gestopt, niets opgeslagen.")
 
 
 def write_json(path, value):
@@ -1170,5 +1176,5 @@ if __name__ == "__main__":
     except ApiError as error:
         if error.status >= 500:  # Onderhoud of storing bij Supercell of de proxy: de volgende ronde gaat gewoon door.
             print(f"API tijdelijk niet beschikbaar, ronde overgeslagen: {error}")
-            sys.exit(0)
+            sys.exit(75)  # De workflow draait halve wijzigingen terug en slaat niets op.
         sys.exit(f"API-fout: {error}")

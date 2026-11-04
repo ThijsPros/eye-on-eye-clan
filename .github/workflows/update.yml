@@ -22,12 +22,24 @@ jobs:
         with:
           python-version: "3.12"
       - name: Data ophalen
+        id: ophalen
         env:
           COC_API_KEY: ${{ secrets.COC_API_KEY }}
-        run: python scripts/fetch.py
+        run: |
+          code=0
+          python scripts/fetch.py || code=$?
+          if [ "$code" = "75" ]; then
+            git checkout -- docs/data
+            git clean -fdq docs/data
+            echo "overslaan=1" >> "$GITHUB_OUTPUT"
+          elif [ "$code" != "0" ]; then
+            exit "$code"
+          fi
       - name: Data controleren
+        if: steps.ophalen.outputs.overslaan != '1'
         run: python scripts/check_data.py
       - name: Data opslaan
+        if: steps.ophalen.outputs.overslaan != '1'
         run: |
           git config user.name "eye-on-eye-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -40,3 +52,17 @@ jobs:
             sleep $((poging * 20))
           done
           exit 1
+      - name: Dagelijkse reservekopie
+        if: steps.ophalen.outputs.overslaan != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dag=$(date -u +%F)
+          naam="reserve-$dag"
+          gh release view "$naam" >/dev/null 2>&1 && exit 0
+          tar -czf "$naam.tar.gz" docs/data data config.json
+          gh release create "$naam" "$naam.tar.gz" --title "Reservekopie $dag" --notes "Volledige data van $dag. Terugzetten: uitpakken in de hoofdmap van de repository." --latest=false
+          # Laatste 60 dagen bewaren, de eerste van elke maand altijd.
+          gh release list --limit 400 --json tagName --jq '.[].tagName' | grep '^reserve-' | grep -v -- '-01$' | sort -r | tail -n +61 | while read -r oud; do
+            gh release delete "$oud" --yes --cleanup-tag
+          done
