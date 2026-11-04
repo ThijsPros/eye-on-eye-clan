@@ -365,6 +365,16 @@ def clashking(path):
         return None
 
 
+def clashking_los(path):
+    """ClashKing-antwoord zonder lijst eromheen."""
+    request = urllib.request.Request(CLASHKING + path, headers={"User-Agent": "eye-on-eye-clan"})
+    try:
+        with urllib.request.urlopen(request, timeout=45) as response:
+            return json.load(response)
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return None
+
+
 def to_date(value):
     return f"{value[:4]}-{value[4:6]}-{value[6:8]}"
 
@@ -398,11 +408,12 @@ def archive_add(tag, wars):
         ours, theirs = (war["clan"], war["opponent"]) if war["clan"].get("tag") == tag else (war["opponent"], war["clan"])
         league = bool(war.get("tag")) or not war.get("attacksPerMember")
         number = None
-        if league:  # Twee CWL's in één maand: na een pauze begint de telling opnieuw.
-            start = parse_time(war["startTime"].replace("-", "")) if "." in war["startTime"] else None
-            nieuw = not months.get("start") or not start or (start - months["start"]).days >= 3
-            months["start"], months["nummer"] = start, 1 if nieuw else months["nummer"] + 1
-            number = months["nummer"]
+        if league:  # Rondes zijn opeenvolgende dagen; zo tellen dubbele of ontbrekende regels niet mee.
+            start = datetime.strptime(war["startTime"][:15], "%Y%m%dT%H%M%S")
+            if not months.get("begin") or (start - months["laatste"]).days >= 3:
+                months["begin"] = start
+            months["laatste"] = start
+            number = min(7, 1 + round((start - months["begin"]).total_seconds() / 86400))
         per_member = 1 if league else war.get("attacksPerMember") or 2
         rows[war["endTime"]] = {
             "soort": "cwl" if league else "oorlog", "ronde": number, "start": war["startTime"], "einde": war["endTime"],
@@ -768,6 +779,41 @@ def ranked_bijwerken(players, raws, leden, clan_tags):
     write_json(pad, opslag)
 
 
+def records_bijwerken(clans):
+    """Ranglijsten voor Nederland en de wereld, plus de eigen records. Vier keer per dag."""
+    pad = DATA / "records.json"
+    oud = read_json(pad, {})
+    if oud.get("ronde") and NOW.timestamp() - oud["ronde"] < 6 * 3600:
+        return
+    NL = 32000166
+    rij = lambda c, waarde: [c.get("tag"), c.get("name"), waarde, c.get("clanLevel"), (c.get("location") or {}).get("countryCode"),
+                             (c.get("badgeUrls") or {}).get("small")]
+    lijsten = {"nl": {}, "wereld": {}}
+    for scope, plek in (("nl", NL), ("wereld", "global")):
+        try:
+            punten = (get(f"/locations/{plek}/rankings/clans?limit=200") or {}).get("items", [])
+            kapitaal = (get(f"/locations/{plek}/rankings/capitals?limit=200") or {}).get("items", [])
+        except ApiError:
+            return
+        lijsten[scope]["punten"] = [rij(c, c.get("clanPoints")) for c in punten]
+        lijsten[scope]["kapitaal"] = [rij(c, c.get("clanCapitalPoints")) for c in kapitaal]
+    reeks = clashking("/v2/leaderboard/clan/win-streak?limit=1000") or []
+    maak = lambda c, w: [c.get("tag"), c.get("name"), w, None, None, (c.get("badgeUrls") or {}).get("small")]
+    lijsten["wereld"]["reeks"] = [maak(c, c.get("war_win_streak")) for c in reeks][:200]
+    lijsten["nl"]["reeks"] = [maak(c, c.get("war_win_streak")) for c in reeks if c.get("location_id") == NL][:200]
+    goud = clashking(f"/v2/leaderboard/{NL}/clan/capital-gold?limit=200") or []
+    lijsten["nl"]["goud"] = [maak(c, c.get("capital_gold_total")) for c in goud]
+    eigen = {}
+    for clan in clans:
+        record = clashking_los(f"/v2/clan/{tag_url(clan['tag'])}/records") or {}
+        eigen[clan["tag"]] = {
+            "punten": clan.get("clanPoints"), "kapitaal": clan.get("clanCapitalPoints"), "reeks": clan.get("warWinStreak"),
+            "winst": clan.get("warWins"), "gelijk": clan.get("warTies"), "verlies": clan.get("warLosses"), "niveau": clan.get("clanLevel"),
+            "recordPunten": record.get("clanPoints"), "recordReeks": record.get("warWinStreak"),
+        }
+    write_json(pad, {"ronde": int(NOW.timestamp()), "lijsten": lijsten, "eigen": eigen})
+
+
 def stand_bijwerken(series, month, earlier, current, stale=False):
     """De eerste meting van een maand staat vast. Geeft de groei sinds die stand en de leaguewissel."""
     if not stale and month not in series:
@@ -1057,6 +1103,7 @@ def main():
 
     write_json(DATA / "history.json", history)
     roof_bijwerken(clans)
+    records_bijwerken(clans)
     ranked_bijwerken(players, raws, leden, clan_tags)
     catalogus_bijwerken(raws)
     games_bijwerken(players, clan_tags)

@@ -302,6 +302,8 @@ a.knop{text-decoration:none;display:inline-block}
 .rtools select{max-width:100%;min-width:0}
 .histvak{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px;align-items:start}
 .histvak .vak{margin:0}
+.recons>td{background:rgb(255 201 60/.16)}
+.recbadge{vertical-align:-5px;margin-right:6px}
 .rbox th{white-space:nowrap}
 .rrij{cursor:pointer}
 .rdet>td{padding:6px 10px 12px;background:rgb(0 0 0/.18)}
@@ -432,7 +434,7 @@ table{font-variant-numeric:tabular-nums}
 <main class="inner" id="inhoud" tabindex="-1"></main>
 <footer class="inner"><span id="voet"></span>Fan-pagina, niet verbonden aan of goedgekeurd door Supercell. Gegevens uit de Clash of Clans API. Oorlogsgeschiedenis en clandatums via <a href="https://clashk.ing">ClashKing</a>.</footer>
 <script>
-const TABS=[["overzicht","Status"],["spelers","Leden"],["opstelling","Opstelling"],["oorlogen","Oorlogen"],["ranked","Ranked"],["roof","Roofweekend"],["games","Clanspelen"]];
+const TABS=[["overzicht","Status"],["spelers","Leden"],["opstelling","Opstelling"],["oorlogen","Oorlogen"],["ranked","Ranked"],["roof","Roofweekend"],["games","Clanspelen"],["records","Records"]];
 const LEIDING_URL="https://api.github.com/repos/ThijsPros/eye-on-eye-clan/contents/docs/data/leiding.json";
 const VAKKEN=[{nr:1,van:1,tot:15},{nr:2,van:101,tot:115},{nr:3,van:16,tot:30}];
 const $=i=>document.getElementById(i);
@@ -444,7 +446,7 @@ const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice
 const klok=d=>`${d.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long",timeZone:"Europe/Amsterdam"})} ${d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Amsterdam"})}`;
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
-let D,bakPool="13",bakZoek="",bakVrij=false,bakSort="score",gekozen=null,lidSoort="",thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},historie={},opstHist=false,opstPlan=null,opstMaand=null,rankedData=null,oorlogJaar=String(new Date().getFullYear()),rOpen=new Set,rSort={k:"lgn",dir:-1},rLegend=false,rStatus="",rLeague="",rZoek="",blokOpen={},catalogus=null,roofData=null,gamesData=null,evClan="",evWeergave="nu",evKeuze={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
+let D,bakPool="13",bakZoek="",bakVrij=false,bakSort="score",gekozen=null,lidSoort="",thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},historie={},recData=null,recScope="nl",recSoort="punten",opstHist=false,opstPlan=null,opstMaand=null,rankedData=null,oorlogJaar=String(new Date().getFullYear()),rOpen=new Set,rSort={k:"lgn",dir:-1},rLegend=false,rStatus="",rLeague="",rZoek="",blokOpen={},catalogus=null,roofData=null,gamesData=null,evClan="",evWeergave="nu",evKeuze={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
 const clanVan=t=>D.clans.find(c=>c.tag===t);
 function schild(nr,maat=40){const c=nr?D?.clans.find(x=>x.nr===nr):null;
  if(c?.logo)return `<img class="logo" src="${esc(c.logo)}" width="${maat}" height="${maat}" alt="${esc(c.naam)}" loading="lazy">`;
@@ -748,7 +750,7 @@ function tegel(w,l,k=""){return `<div class="tegel ${k}"><b>${w}</b>${esc(l)}</d
 const eventRomeins=n=>["","I","II","III","IV"][n]??"?";
 const evChips=(hist)=>`<div class="chips">${chip("ev","","Alle clans",evClan)}${[...D.clans].sort((a,b)=>a.nr-b.nr).map(c=>chip("ev",c.tag,c.naam,evClan,c)).join("")}</div><div class="chips">${chip("evw","nu",hist,evWeergave)}${chip("evw","hist","Historie",evWeergave)}</div>`;
 function evSpeler(tag,naam){const p=D.players.find(x=>x.tag===tag);return `<div class="speler">${schild(p?.inClan?clanNr(p):null,20)}${p?`<button class="naam" data-speler="${tag.slice(1)}">${esc(p.naam)}</button>`:`<span class="sn">${esc(naam||tag)}</span>`}${p&&!p.inClan?'<span class="vlag oud">Oud-lid</span>':""}</div>`}
-function evLaad(s,pad,zet){if(s!==null)return;zet(undefined);fetch(pad,{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({})).then(d=>{zet(d);if(tab==="roof"||tab==="games"||tab==="ranked")render();if(tab==="roof")roofLive()})}
+function evLaad(s,pad,zet){if(s!==null)return;zet(undefined);fetch(pad,{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({})).then(d=>{zet(d);if(tab==="roof"||tab==="games"||tab==="ranked"||tab==="records")render();if(tab==="roof")roofLive()})}
 async function roofLive(){if(tab!=="roof"||!liveUrl||document.hidden||!roofData?.weekenden)return;try{const r=await fetch(`${liveUrl}/roof?tags=${D.clans.map(c=>c.tag.slice(1)).join(",")}`);if(!r.ok)return;const l=await r.json();if(!l.length)return;l.forEach(w=>{const k=`${w.clan}|${w.start}`;roofData.weekenden[k]={...roofData.weekenden[k],...w}});if(tab==="roof"&&!document.querySelector("select:focus"))render()}catch{}}
 function roofRijen(start){const ws=Object.values(roofData.weekenden).filter(w=>w.start===start&&(w.leden.length||w.status==="ongoing")),per=new Map;
  ws.forEach(w=>w.leden.forEach(m=>{const r=per.get(m.tag)||{tag:m.tag,naam:m.naam,aanv:0,max:0,buit:0,clans:new Set};r.aanv+=m.aanv;r.max=Math.max(r.max,w.status==="ongoing"?m.limiet+Math.max(m.bonus,1):m.limiet+m.bonus);r.buit+=m.buit;r.clans.add(w.clan);per.set(m.tag,r)}));
@@ -811,6 +813,20 @@ function rankedView(){evLaad(rankedData,"data/ranked.json",d=>rankedData=d);cons
  <div class="tools rtools"><input id="rzoek" type="search" placeholder="Zoek speler" aria-label="Zoek speler" value="${esc(rZoek)}"><select id="rleague" aria-label="Filter op league"><option value="">Alle leagues</option>${leagues.map(l=>`<option${l===rLeague?" selected":""}>${esc(l)}</option>`).join("")}</select>${!hist&&keys.length>1?`<select id="evkeuze" aria-label="Kies week">${keys.map(x=>`<option value="${x}"${x===k?" selected":""}>Week van ${rMaand(+x)}${x===huidig?" (bezig)":""}</option>`).join("")}</select>`:""}${!hist&&nu?`<span class="teller">Nog <b data-tot="${+eind}">${resttijd(eind)}</b></span>`:""}</div>
  <div id="rtabel">${rTabelHtml(keys,k,nu)}</div>
  <p class="uitleg">Tik op een kolomkop om van hoog naar laag te sorteren, en op een rij voor alle aanvallen en verdedigingen van die speler. Mag overslaan is het aantal weken na deze week zonder aanval dat geen gevolgen heeft. Uiterlijk meedoen is de maandag van de week waarin iemand minstens één aanval moet doen. Alleen inschrijven telt niet als actief. Wie meer dan 4 weken mist, daalt een league. Elk uur bijgewerkt. Een week loopt van maandag 06:00 tot maandag 06:00. </p></section>`}
+const REC={punten:"Clanpunten",reeks:"Winreeks",kapitaal:"Capital-punten",goud:"Capital gold"};
+function recPlek(lijst,w,tag){const i=lijst.findIndex(r=>r[0]===tag);if(i>=0)return i+1;if(w==null||!lijst.length)return null;return w>=lijst[lijst.length-1][2]?1+lijst.filter(r=>r[2]>w).length:null}
+function recordsView(){evLaad(recData,"data/records.json",d=>recData=d);const kop='<section class="sectie"><h2>Records</h2>';if(!recData)return kop+'<p class="uitleg">Laden…</p></section>';if(!recData.lijsten)return kop+'<p class="uitleg">De eerste ranglijsten komen bij de volgende ophaalronde.</p></section>';
+ const s=recData.lijsten[recScope]||{},soort=s[recSoort]?recSoort:"punten",lijst=s[soort]||[],clans=[...D.clans].sort((a,b)=>a.nr-b.nr),eigen=recData.eigen||{},ons=new Set(clans.map(c=>c.tag)),land=recScope==="nl"?"Nederland":"de wereld";
+ const kaart=c=>{const e=eigen[c.tag]||{},p=k=>{const l=s[k];if(!l)return "";const w=e[k],r=recPlek(l,w,c.tag);return `<tr><th scope="row">${REC[k]}</th><td class="n">${getal(w)}</td><td class="n">${r?`#${r}`:`<span class="rvan">Buiten top ${l.length}</span>`}</td></tr>`};
+  return `<article class="vak"><div class="vakkop">${schild(c.nr,28)}<h3>${esc(c.naam)}</h3><span class="teller">Level ${e.niveau??"–"}</span></div><div class="tablebox plat"><table><tbody>${p("punten")}${p("reeks")}${p("kapitaal")}</tbody></table></div><p class="vakmeet"><span>Oorlogen <b>${getal(e.winst)}</b> gewonnen, <b>${getal(e.gelijk)}</b> gelijk, <b>${getal(e.verlies)}</b> verloren</span>${e.recordPunten?`<span>Record clanpunten <b>${getal(e.recordPunten.value)}</b></span>`:""}${e.recordReeks?`<span>Record winreeks <b>${getal(e.recordReeks.value)}</b></span>`:""}</p></article>`};
+ const rijen=[...lijst.map((r,i)=>({p:i+1,t:r[0],n:r[1],w:r[2],l:r[3],c:r[4],b:r[5]}))];
+ clans.forEach(c=>{const w=eigen[c.tag]?.[soort];if(!rijen.some(r=>r.t===c.tag)&&w!=null&&lijst.length)rijen.push({p:recPlek(lijst,w,c.tag),t:c.tag,n:c.naam,w,l:eigen[c.tag]?.niveau,uit:true})});
+ const eerst=rijen.filter(r=>!r.uit),uit=rijen.filter(r=>r.uit).sort((a,b)=>b.w-a.w),rij=r=>`<tr class="${ons.has(r.t)?"recons":""}"><td class="n">${r.p?`#${r.p}`:"–"}</td><td>${r.b?`<img src="${esc(r.b)}" width="20" height="20" alt="" class="recbadge" loading="lazy">`:ons.has(r.t)?schild(clanVan(r.t)?.nr,20):""}${esc(r.n)}</td><td class="n opt">${r.l??"–"}</td>${recScope==="wereld"?`<td class="opt">${esc(r.c??"–")}</td>`:""}<td class="n"><b>${getal(r.w)}</b></td></tr>`;
+ return `${kop}<div class="rschakel" role="group" aria-label="Gebied"><button class="knop ${recScope==="nl"?"":"licht"}" data-rec="nl">Nederland</button><button class="knop ${recScope==="wereld"?"":"licht"}" data-rec="wereld">Wereld</button></div>
+ <div class="vakken histvak">${clans.map(kaart).join("")}</div>
+ <div class="chips schuif">${Object.keys(REC).filter(k=>s[k]).map(k=>chip("recs",k,REC[k],soort)).join("")}</div>
+ ${lijst.length?`<div class="tablebox"><table><thead><tr><th class="n">Plek</th><th>Clan</th><th class="n opt">Level</th>${recScope==="wereld"?'<th class="opt">Land</th>':""}<th class="n">${REC[soort]}</th></tr></thead><tbody>${eerst.map(rij).join("")}${uit.map(rij).join("")}</tbody></table></div>`:'<p class="uitleg">Geen ranglijst beschikbaar.</p>'}
+ <p class="uitleg">De ranglijst toont de top ${lijst.length||200} van ${land}. Staan we daarbuiten, dan staan onze clans onderaan zonder plek. Winreeks en capital gold komen van ClashKing, de rest uit de officiële API.</p></section>`}
 function roofVolgende(){const d=new Date;d.setUTCHours(7,0,0,0);d.setUTCDate(d.getUTCDate()+((5-d.getUTCDay()+7)%7));if(d<=new Date)d.setUTCDate(d.getUTCDate()+7);return d}
 function roofView(){evLaad(roofData,"data/roof.json",d=>roofData=d);const kop=`<section class="sectie"><h2>Roofweekend</h2>`;if(!roofData)return kop+'<p class="uitleg">Laden…</p></section>';
  const alle=Object.values(roofData.weekenden||{}).filter(w=>w.start>=ROOF_VANAF);if(!alle.length){const v=roofVolgende();return `${kop}<div class="timer"><b data-tot="${+v}">${resttijd(v)}</b><span>Volgend roofweekend vanaf ${klok(v)}</span></div><p class="uitleg">De lijst begint bij dit roofweekend en groeit daarna elk weekend verder.</p></section>`}
@@ -861,7 +877,7 @@ const ICOON={overzicht:'<path d="M12 3 20 6v6c0 5-3.5 8-8 9.5C7.500 20 4 17 4 12
 const ico=k=>`<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICOON[k]||""}</svg>`;
 function nav(){const actief=tab==="speler"?"spelers":tab,knop=([k,t])=>`<button data-tab="${k}"${actief===k?' aria-current="page"':""}>${ico(k)}<span>${t}</span></button>`,extra=TABS.slice(4),inMeer=extra.some(x=>x[0]===actief);$("nav").innerHTML=TABS.slice(0,4).map(knop).join("")+`<button class="meerknop" data-meer aria-expanded="false"${inMeer?' aria-current="page"':""}>${ico("meer")}<span>Meer</span></button><div class="navmeer">${extra.map(knop).join("")}</div>`}
 function merk(){const c=D.clans.find(x=>x.nr===1);if(!c)return;$("merknaam").textContent=c.naam;if(c.logo)$("merklogo").outerHTML=`<img id="merklogo" class="logo" src="${esc(c.logo)}" width="44" height="44" alt="">`}
-function render(){merk();nav();document.title=`${tab==="speler"?D.players.find(x=>x.tag==="#"+spelerTag)?.naam??"Speler":TABS.find(x=>x[0]===tab)?.[1]??"Status"} | Eye on Eye`;$("muur").innerHTML=tab==="overzicht"?muur():"";document.querySelector(".wall").classList.toggle("laag",tab!=="overzicht");$("voet").textContent=`Bijgewerkt ${klok(new Date(D.bijgewerkt))}. `;$("inhoud").innerHTML={overzicht:overzichtView,spelers:spelersView,opstelling:opstellingView,oorlogen:oorlogenView,ranked:rankedView,roof:roofView,games:gamesView,speler:spelerView}[tab]();if(tab==="spelers")teller()}
+function render(){merk();nav();document.title=`${tab==="speler"?D.players.find(x=>x.tag==="#"+spelerTag)?.naam??"Speler":TABS.find(x=>x[0]===tab)?.[1]??"Status"} | Eye on Eye`;$("muur").innerHTML=tab==="overzicht"?muur():"";document.querySelector(".wall").classList.toggle("laag",tab!=="overzicht");$("voet").textContent=`Bijgewerkt ${klok(new Date(D.bijgewerkt))}. `;$("inhoud").innerHTML={overzicht:overzichtView,spelers:spelersView,opstelling:opstellingView,oorlogen:oorlogenView,ranked:rankedView,records:recordsView,roof:roofView,games:gamesView,speler:spelerView}[tab]();if(tab==="spelers")teller()}
 function teller(){$("teller").textContent=`${zichtbaar().length} leden`}
 function tabel(){$("rijen").innerHTML=rijen();$("kop").innerHTML=kop();teller()}
 
@@ -874,6 +890,8 @@ addEventListener("click",async e=>{const mk=e.target.closest("[data-meer]"),nv=$
  if(e.target.closest("[data-terug]")){history.length>1?history.back():location.hash="spelers";return}
  const rd2=e.target.closest("[data-rdet]");if(rd2&&!e.target.closest("[data-speler]")){const t=rd2.dataset.rdet;rOpen.has(t)?rOpen.delete(t):rOpen.add(t);render();return}
  const rk=e.target.closest("[data-rk]");if(rk){const k=rk.dataset.rk;rSort=rSort.k===k?{k,dir:-rSort.dir}:{k,dir:k==="naam"?1:-1};render();return}
+ const rc=e.target.closest("[data-rec]");if(rc){recScope=rc.dataset.rec;render();return}
+ const rcs=e.target.closest("[data-recs]");if(rcs){recSoort=rcs.dataset.recs;render();return}
  const rv=e.target.closest("[data-rv]");if(rv){rLegend=rv.dataset.rv==="legend";render();return}
  const rs=e.target.closest("[data-rs]");if(rs){rStatus=rs.dataset.rs;render();return}
  const ev=e.target.closest("[data-ev]");if(ev){evClan=ev.dataset.ev;render();return}
