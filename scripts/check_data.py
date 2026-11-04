@@ -55,9 +55,11 @@ def geen_krimp(hist, oud, rang, rang_oud, roof, roof_oud, games, games_oud):
     for clan, rijen in (archief_oud or {}).items():
         if len(archief.get(clan, [])) < len(rijen) * 0.98:
             fouten.append(f"Oorlogsarchief kromp: {clan}")
-    for pad in (DATA / "historie").glob("*.json"):
-        detail = eerder(f"docs/data/historie/{pad.name}")
-        if detail and set(detail) - set(lees(pad)):
+    gewijzigd = subprocess.run(["git", "diff", "--name-only", "HEAD", "--", "docs/data/historie"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+    for naam in gewijzigd:
+        pad = ROOT / naam
+        detail = eerder(naam)
+        if pad.exists() and detail and set(detail) - set(lees(pad)):
             fouten.append(f"Maanden verdwenen uit {pad.name}")
 
 
