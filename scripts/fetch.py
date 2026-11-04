@@ -1168,4 +1168,7 @@ if __name__ == "__main__":
     except Private:
         sys.exit("API-fout: de sleutel is geweigerd. Controleer de sleutel en het IP-adres.")
     except ApiError as error:
+        if error.status >= 500:  # Onderhoud of storing bij Supercell of de proxy: de volgende ronde gaat gewoon door.
+            print(f"API tijdelijk niet beschikbaar, ronde overgeslagen: {error}")
+            sys.exit(0)
         sys.exit(f"API-fout: {error}")

@@ -34,5 +34,9 @@ jobs:
           git add docs/data
           git diff --cached --quiet && exit 0
           git commit -m "Clandata bijwerken"
-          git pull --rebase
-          git push
+          for poging in 1 2 3 4 5; do
+            git pull --rebase && git push && exit 0
+            echo "Opslaan mislukt, poging $poging. Opnieuw over $((poging * 20)) seconden."
+            sleep $((poging * 20))
+          done
+          exit 1
