@@ -416,10 +416,12 @@ def archive_add(tag, wars):
         number = None
         if league:  # Rondes zijn opeenvolgende dagen; zo tellen dubbele of ontbrekende regels niet mee.
             start = datetime.strptime(war["startTime"][:15], "%Y%m%dT%H%M%S")
-            if not months.get("begin") or (start - months["laatste"]).days >= 3:
-                months["begin"] = start
-            months["laatste"] = start
-            number = min(7, 1 + round((start - months["begin"]).total_seconds() / 86400))
+            gat = (start - months["einde"]).total_seconds() if months.get("einde") else None
+            if gat is None or gat >= 7 * 86400:  # Nieuw seizoen; juni 2026 had er twee.
+                number = 1
+            else:  # Elke hele dag tussen twee rondes is een ontbrekende ronde.
+                number = min(7, months["ronde"] + 1 + max(0, int(gat // 86400)))
+            months["ronde"], months["einde"] = number, datetime.strptime(war["endTime"][:15], "%Y%m%dT%H%M%S")
         per_member = 1 if league else war.get("attacksPerMember") or 2
         rows[war["endTime"]] = {
             "soort": "cwl" if league else "oorlog", "ronde": number, "start": war["startTime"], "einde": war["endTime"],
