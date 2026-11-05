@@ -1,0 +1,76 @@
+name: Tijdelijke controle
+on:
+  workflow_dispatch:
+jobs:
+  controle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vergelijk
+        env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          cat > /tmp/p.py <<'PY'
+          import json,os,urllib.request,urllib.parse,collections,sys
+          B="https://cocproxy.royaleapi.dev/v1"
+          def g(p):
+              r=urllib.request.Request(B+p,headers={"Authorization":"Bearer "+os.environ["COC_API_KEY"],"Accept":"application/json"})
+              try:
+                  return json.load(urllib.request.urlopen(r,timeout=30))
+              except Exception as e:
+                  return {"fout":str(e)[:80]}
+          q=lambda t:urllib.parse.quote(t,safe="")
+          L=json.load(open("docs/data/latest.json"));P={p["tag"]:p for p in L["players"]}
+          A=json.load(open("docs/data/archief.json"));RO=json.load(open("docs/data/roof.json"))["weekenden"]
+          print("data van",L["bijgewerkt"])
+          D=collections.defaultdict(list)
+          for c in L["clans"]:
+              t=c["tag"];a=g("/clans/"+q(t))
+              print("CLAN",c["naam"],"lvl",a.get("clanLevel"),c["niveau"],"leden",a.get("members"),c["leden"],"league",(a.get("warLeague") or {}).get("name"),c.get("warLeague"),"wins",a.get("warWins"),c.get("winst"),"streak",a.get("warWinStreak"),"ties",a.get("warTies"),"losses",a.get("warLosses"),"capital",(a.get("capitalLeague") or {}).get("name"),"cap punten",a.get("clanCapitalPoints"),"hall",(a.get("clanCapital") or {}).get("capitalHallLevel"),"eis TH",a.get("requiredTownhallLevel"),"type",a.get("type"),"freq",a.get("warFrequency"),"log",a.get("isWarLogPublic"),"familie",a.get("isFamilyFriendly"),"labels",[x["name"] for x in a.get("labels",[])])
+              ml=a.get("memberList",[])
+              eig={p["tag"] for p in L["players"] if p.get("clanTag")==t and p.get("inClan")}
+              api={m["tag"] for m in ml}
+              if api-eig: D["lid-niet-in-data"].append((c["naam"],[m["name"] for m in ml if m["tag"] in api-eig]))
+              if eig-api: D["data-niet-in-api"].append((c["naam"],[P[x]["naam"] for x in eig-api]))
+              for m in ml:
+                  p=P.get(m["tag"])
+                  if not p: continue
+                  if p.get("rol") and {"admin":"Elder","coLeader":"Co-Leader","leader":"Leader","member":"Member"}.get(m.get("role"))!=p.get("rol"): D["rol"].append((p["naam"],m.get("role"),p.get("rol")))
+                  if m.get("donations",0)<(p.get("don") or 0): D["don-lager"].append((p["naam"],m.get("donations"),p.get("don")))
+                  r=g("/players/"+q(m["tag"]))
+                  if "tag" not in r: D["speler-fout"].append(m["name"]);continue
+                  he=sum(h["level"] for h in r.get("heroes",[]) if h.get("village")=="home")
+                  eq=sum(h["level"] for h in r.get("heroEquipment",[]))
+                  gc=[x["value"] for x in r.get("achievements",[]) if x["name"]=="Games Champion"]
+                  chk=[("th",r.get("townHallLevel"),p.get("th")),("warSterren",r.get("warStars"),p.get("warSterren")),("helden",he,p.get("helden")),("equip",eq,p.get("equip")),("games",gc[0] if gc else None,p.get("gamesTotaal")),("naam",r.get("name"),p.get("naam")),("league",(r.get("leagueTier") or {}).get("name"),p.get("league"))]
+                  for k,x,y in chk:
+                      if x!=y: D["verschil-"+k].append((p["naam"],x,y))
+              w=g("/clans/"+q(t)+"/warlog?limit=60").get("items",[])
+              eind={x["einde"]:x for x in A.get(t,[])}
+              n=0
+              for i in w:
+                  if not i.get("opponent",{}).get("tag"): continue
+                  x=eind.get(i["endTime"]);n+=1
+                  if not x: D["warlog-niet-in-archief"].append((c["naam"],i["endTime"],i["opponent"].get("name")));continue
+                  o,z=i["clan"],i["opponent"]
+                  if x["s"]!=[o["stars"],z["stars"]] or abs(x["p"][0]-o["destructionPercentage"])>.1 or x["grootte"]!=i["teamSize"] or x["gebruikt"]!=o.get("attacks",x["gebruikt"]): D["warlog-verschil"].append((c["naam"],i["endTime"],x["s"],o["stars"],z["stars"]))
+              print(" warlog vergeleken",n,"regels", "cwl-regels",sum(1 for i in w if not i.get("opponent",{}).get("tag")))
+              r=g("/clans/"+q(t)+"/capitalraidseasons?limit=30").get("items",[])
+              m=0
+              for s in r:
+                  k=t+"|"+s["startTime"];x=RO.get(k)
+                  if not x: D["roof-ontbreekt"].append((c["naam"],s["startTime"],s.get("capitalTotalLoot")));continue
+                  m+=1
+                  if x["buit"]!=s.get("capitalTotalLoot") or x["aanvallen"]!=s.get("totalAttacks") or x["wijken"]!=s.get("enemyDistrictsDestroyed") or x["beloning"]!=s.get("offensiveReward") or x["verdediging"]!=s.get("defensiveReward"): D["roof-verschil"].append((c["naam"],s["startTime"],x["buit"],s.get("capitalTotalLoot"),x["aanvallen"],s.get("totalAttacks"),x["beloning"],s.get("offensiveReward")))
+              print(" roof vergeleken",m,"nu",r[0].get("state") if r else None,r[0].get("startTime") if r else None)
+              cw=g("/clans/"+q(t)+"/currentwar");print(" huidige oorlog",cw.get("state"),cw.get("teamSize"))
+              lg=g("/clans/"+q(t)+"/currentwar/leaguegroup");print(" groep",lg.get("state"),lg.get("season"),len(lg.get("clans",[])),"rondes",len(lg.get("rounds",[])))
+              # eerste speler ruwe velden
+          t=L["clans"][0]["tag"];a=g("/clans/"+q(t))
+          r=g("/players/"+q(a["memberList"][0]["tag"]))
+          print("spelervelden",sorted(r.keys()))
+          print("clanvelden",sorted(a.keys()))
+          for k,v in D.items(): print(k,len(v),v[:12])
+          print("EINDE")
+          PY
+          python3 /tmp/p.py
