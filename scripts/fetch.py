@@ -858,12 +858,15 @@ def ranked_officieel(players, raws, leden, clan_tags):
         try:
             for groep, seizoen, klaar in ((raw.get("currentLeagueGroupTag"), raw.get("currentLeagueSeasonId"), False),
                                           (raw.get("previousLeagueGroupTag"), raw.get("previousLeagueSeasonId"), True)):
-                if not groep or groep == "#0" or not seizoen or int(seizoen) < week_nu - RANKED_WEEK:
+                if not groep or groep == "#0" or not seizoen or int(seizoen) < week_nu - RANKED_WEEK or player["league"] == "Legend I":
                     continue
                 regel = weken.setdefault(str(seizoen), {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
                 if klaar and regel.get("eindGroep"):
                     continue
-                data = get(f"/leaguegroup/{tag_url(groep)}/{seizoen}?playerTag={tag_url(tag)}")
+                try:
+                    data = get(f"/leaguegroup/{tag_url(groep)}/{seizoen}?playerTag={tag_url(tag)}")
+                except ApiError:
+                    continue  # De groep is soms even weg; volgende ronde weer.
                 if data and ranked_groep(regel, data, tag, regel.get("lgn") or player["lgn"]):
                     regel.setdefault("naam", player["naam"])
                     regel.setdefault("clan", player.get("clanTag"))
