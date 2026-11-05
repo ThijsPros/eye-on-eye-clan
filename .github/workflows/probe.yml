@@ -1,0 +1,50 @@
+name: Tijdelijke controle
+on:
+  workflow_dispatch:
+jobs:
+  controle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vergelijk
+        env:
+          COC_API_KEY: ${{ secrets.COC_API_KEY }}
+        run: |
+          cat > /tmp/p.py <<'PY'
+          import json,os,urllib.request,urllib.parse,collections
+          B="https://cocproxy.royaleapi.dev/v1";K="https://api.clashk.ing"
+          q=lambda t:urllib.parse.quote(t,safe="")
+          def g(u,base=B):
+              h={"Accept":"application/json","User-Agent":"eye-on-eye-controle"}
+              if base==B: h["Authorization"]="Bearer "+os.environ["COC_API_KEY"]
+              try:
+                  r=urllib.request.urlopen(urllib.request.Request(base+u,headers=h),timeout=60);return r.status,json.load(r)
+              except urllib.error.HTTPError as e: return e.code,e.read()[:160]
+              except Exception as e: return 0,str(e)[:120]
+          L=json.load(open("docs/data/latest.json"))
+          s,t=g("/leaguetiers");TI={x["id"]:x["name"] for x in t["items"]};ORD=sorted(TI)
+          rows=collections.defaultdict(lambda:{"op":[],"zelf":[],"neer":[]})
+          leg=[p for p in L["players"] if p.get("inClan") and p.get("league") in("Legend I","Legend II")]
+          vb=0
+          for p in [x for x in L["players"] if x.get("inClan")]:
+              s,h=g("/players/"+q(p["tag"])+"/leaguehistory")
+              it=(h.get("items") or []) if isinstance(h,dict) else []
+              if p.get("league")=="Legend I" and vb<3:
+                  vb+=1;s2,r=g("/players/"+q(p["tag"]));print(p["naam"],"tr",r.get("trophies"),"lt",(r.get("leagueTier")or{}).get("name"),r.get("currentLeagueGroupTag"),r.get("currentLeagueSeasonId"),r.get("previousLeagueGroupTag"),r.get("previousLeagueSeasonId"),[(i["leagueSeasonId"],TI.get(i["leagueTierId"]),i["placement"],i["leagueTrophies"],i["attackWins"],i["attackLosses"],i["defenseWins"],i["defenseLosses"],i["maxBattles"]) for i in it])
+              for a,b in zip(it,it[1:]):
+                  if b["leagueSeasonId"]-a["leagueSeasonId"]!=604800: continue
+                  d=ORD.index(b["leagueTierId"])-ORD.index(a["leagueTierId"])
+                  rows[a["leagueTierId"]]["op" if d>0 else "neer" if d<0 else "zelf"].append(a["placement"])
+          for k in ORD:
+              if k in rows:
+                  r=rows[k];print(TI[k],"op max",max(r["op"] or [0]),len(r["op"]),"zelf",min(r["zelf"] or [0]),max(r["zelf"] or [0]),len(r["zelf"]),"neer min",min(r["neer"] or [0]),len(r["neer"]))
+          for u in ["/leagues","/leagues/29000022","/leagues/29000022/seasons","/leaguetiers/105000036","/leaguetiers/105000036/seasons","/leaguetiers/105000036/seasons/1793595600?limit=3","/leaguetiers/105000036/rankings?limit=3","/locations/global/rankings/players?limit=2","/locations/32000166/rankings/players?limit=2","/locations/global/rankings/players?limit=10000"]:
+              s,d=g(u);print(u,s,(str(d)[:220] if s!=200 else (len(d.get("items",[])),json.dumps((d.get("items") or [d])[-1])[:260])))
+          for u in ["/v2/legends/rankings?limit=2","/v2/leaderboard/legend?limit=2","/v2/leaderboard/global/players?limit=2","/v2/legends/stats","/legends/rankings","/v2/player/"+q(leg[0]["tag"])+"/legends" if leg else "/x"]:
+              s,d=g(u,K);print("CK",u,s,str(d)[:240])
+          m=[x for x in L["players"] if x.get("inClan") and x.get("league","").startswith("Electro")][0]
+          s,r=g("/players/"+q(m["tag"]));s,d=g("/leaguegroup/"+q(r["currentLeagueGroupTag"])+"/"+str(r["currentLeagueSeasonId"])+"?playerTag="+q(m["tag"]))
+          ms=d.get("members",[]);tr=[x["leagueTrophies"] for x in ms];print("gesorteerd",tr==sorted(tr,reverse=True),len(ms),tr[:3],tr[-3:],sorted(ms[0].keys()))
+          print("EINDE")
+          PY
+          python3 /tmp/p.py
