@@ -84,6 +84,12 @@ h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;line-height:1.05}
 .rang.ja{background:#17804A;color:#fff}
 .rang.nee{background:#C2332B;color:#fff}
 .ats{display:grid;gap:1px}
+.lijstwissel{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.lijstwissel button{all:unset;box-sizing:border-box;text-align:center;font-size:14px;font-weight:500;min-height:36px;line-height:36px;border-radius:4px;background:rgb(255 255 255/.08);color:var(--on-night-soft);cursor:pointer}
+.lijstwissel button[aria-pressed="true"]{background:var(--gold);color:#2B1400}
+.lijstwissel button:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.vdw{display:grid;min-width:0}.vdw small{font-size:12px;font-weight:400;color:var(--on-night-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st.v3{color:#FF9A8F}.st.v2{color:var(--gold)}.st.v1,.st.v0{color:#6FE0A6}
 .aanval{display:grid;grid-template-columns:62px 32px;align-items:center;gap:3px}
 .aanval small{font-size:12px;color:var(--on-night-soft);text-align:right}
 .st{font-size:20px;letter-spacing:0;line-height:1.1}
@@ -455,7 +461,7 @@ const tijd=s=>s?new Date(`${iso(s)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice
 const klok=d=>`${d.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long",timeZone:"Europe/Amsterdam"})} ${d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Amsterdam"})}`;
 const duur=d=>{const m=Math.max(0,Math.round((d-Date.now())/6e4)),u=Math.floor(m/60);return u?`${u} uur ${m%60} min`:`${m} min`};
 const ROMEINS=["","I","II","III","IV"];
-let D,bakPool="13",bakZoek="",bakVrij=false,bakSort="score",gekozen=null,lidSoort="",thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},historie={},recData=null,recScope="nl",recSoort="punten",opstHist=false,opstPlan=null,opstMaand=null,rankedData=null,oorlogJaar=String(new Date().getFullYear()),rOpen=new Set,rSort={k:"lgn",dir:-1},rLegend=false,rStatus="",rLeague="",rZoek="",blokOpen={},catalogus=null,roofData=null,gamesData=null,evClan="",evWeergave="nu",evKeuze={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
+let lijstModus={},D,bakPool="13",bakZoek="",bakVrij=false,bakSort="score",gekozen=null,lidSoort="",thFilter="",indelingCache={},cwlWeergave={},cwlRonde={},spelerTag=null,spelerData={},historie={},recData=null,recScope="nl",recSoort="punten",opstHist=false,opstPlan=null,opstMaand=null,rankedData=null,oorlogJaar=String(new Date().getFullYear()),rOpen=new Set,rSort={k:"lgn",dir:-1},rLegend=false,rStatus="",rLeague="",rZoek="",blokOpen={},catalogus=null,roofData=null,gamesData=null,evClan="",evWeergave="nu",evKeuze={},archief=null,oorlogAantal=100,oorlogClan="",oorlogSoort="",liveUrl=null,liveTijd=null,liveUit=false,rondeKeuze={},dichteLijst=new Set,L={spelers:{}},bewerk=false,sha=null,gewijzigd=0,oorlogZoek="",opslagMelding="",tab="overzicht",sort={k:"lgn",dir:-1},zoek="",filter="",clanFilter="",open=new Set;
 const clanVan=t=>D.clans.find(c=>c.tag===t);
 function schild(nr,maat=40){const c=nr?D?.clans.find(x=>x.nr===nr):null;
  if(c?.logo)return `<img class="logo" src="${esc(c.logo)}" width="${maat}" height="${maat}" alt="${esc(c.naam)}" loading="lazy">`;
@@ -496,9 +502,17 @@ function timerBlok(w){const e=tijd(w.einde),st=tijd(w.start);
  if(w.status==="preparation")return `<div class="timer"><b data-tot="${+st}">${resttijd(st)}</b><span>Start ${klok(st)}, eindigt ${klok(e)}</span></div>`;
  return `<div class="timer"><span>Afgelopen ${klok(e)}</span></div>`}
 function sterRij(a){const n=a?.sterren??0,k=!a?"leeg":n===3?"s3":n===2?"s2":n===1?"s1":"leeg";return `<span class="aanval"><span class="st ${k}" role="img" aria-label="${a?`${n} sterren, ${a.procent}%`:"Nog niet aangevallen"}">${"★".repeat(n)}${"☆".repeat(3-n)}</span><small>${a?`${a.procent}%`:""}</small></span>`}
-function ledenLijst(c,w){const per=w.perLid||1,leden=w.leden||[],nog=leden.filter(m=>m.aanvallen.length<per).length;
+function verdRij(a){const n=a?.sterren??0;return `<span class="aanval"><span class="st ${a?`v${n}`:"leeg"}" role="img" aria-label="${a?`${n} sterren tegen${a.procent!=null?`, ${a.procent}%`:""}`:"Nog niet aangevallen"}">${"★".repeat(n)}${"☆".repeat(3-n)}</span><small>${a?.procent!=null?`${a.procent}%`:""}</small></span>`}
+function verdLijst(c,w){const leden=w.leden||[];if(!leden.some(m=>m.verd))return `<p class="rust">Verdedigingen van deze oorlog zijn niet bewaard.</p>`;
+ const open=leden.filter(m=>!m.verd?.length).length,drie=leden.filter(m=>m.verd?.[0]?.sterren===3).length;
+ const tekst=`${w.status==="inWar"&&open?`${open} van ${leden.length} nog niet aangevallen`:"Verdedigingen per speler"}, ${drie} keer 3★ tegen`;
+ return `<details class="open" data-lijst="${esc(c.tag)}"${dichteLijst.has(c.tag)?"":" open"}><summary>${tekst}</summary><ol class="leden">${leden.map((m,i)=>{const l=m.verd||[],a=l[0],door=a?`${a.door?`door ${esc(a.door)}${a.th?` (TH${a.th})`:""}`:"aangevallen"}${l.length>1?`, ${l.length}x`:""}`:"nog niet aangevallen";
+  return `<li><span class="rang ${!a?"":a.sterren===3?"nee":"ja"}">${i+1}</span><span class="vdw">${m.tag?`<button class="naam sn" data-speler="${esc(m.tag.slice(1))}">${esc(m.naam)}</button>`:`<span class="sn">${esc(m.naam)}</span>`}<small>${door}</small></span><span class="ats">${verdRij(a)}</span></li>`}).join("")}</ol></details>`}
+function ledenLijst(c,w){const per=w.perLid||1,leden=w.leden||[],nog=leden.filter(m=>m.aanvallen.length<per).length,kan=w.status!=="preparation",verd=kan&&lijstModus[c.tag]==="verd";
+ const knop=(m,t,aan)=>`<button data-lijstm="${esc(c.tag)}" data-m="${m}" aria-pressed="${aan}">${t}</button>`,wissel=kan?`<div class="lijstwissel" role="group" aria-label="Kies aanvallen of verdedigingen">${knop("aanval","Aanvallen",!verd)}${knop("verd","Verdedigingen",verd)}</div>`:"";
+ if(verd)return wissel+verdLijst(c,w);
  const tekst=w.status==="inWar"?(nog?`${nog} van ${leden.length} moeten nog aanvallen`:"Iedereen heeft aangevallen"):w.status==="preparation"?`Opstelling (${leden.length} spelers)`:"Aanvallen per speler";
- return `<details class="open" data-lijst="${esc(c.tag)}"${dichteLijst.has(c.tag)?"":" open"}><summary>${tekst}</summary><ol class="leden">${leden.map((m,i)=>{const klaar=m.aanvallen.length>=per,rijen=[];for(let j=0;j<per;j++)rijen.push(sterRij(m.aanvallen[j]));
+ return `${wissel}<details class="open" data-lijst="${esc(c.tag)}"${dichteLijst.has(c.tag)?"":" open"}><summary>${tekst}</summary><ol class="leden">${leden.map((m,i)=>{const klaar=m.aanvallen.length>=per,rijen=[];for(let j=0;j<per;j++)rijen.push(sterRij(m.aanvallen[j]));
   return `<li><span class="rang ${w.status==="preparation"?"":klaar?"ja":"nee"}">${i+1}</span>${m.tag?`<button class="naam sn" data-speler="${esc(m.tag.slice(1))}">${esc(m.naam)}</button>`:`<span class="sn">${esc(m.naam)}</span>`}<span class="ats">${rijen.join("")}</span></li>`}).join("")}</ol></details>`}
 function rondeKnoppen(c,rondes,keuze){let r="";for(let i=1;i<=7;i++){const w=rondes[i],o=w&&w.status==="warEnded"?oordeel(w)[0]:"",k=!w?"":w.status==="inWar"?"bezig":w.status==="preparation"?"voor":o;
  const uitleg=!w?"nog niet bekend":w.status==="inWar"?"bezig":w.status==="preparation"?"voorbereiding":w.status==="warEnded"?(o==="win"?"gewonnen":o==="ver"?"verloren":"gelijkspel"):"einde niet gezien";
@@ -524,12 +538,13 @@ const gemDuur=l=>{const d=l.map(a=>a.duration).filter(v=>v!=null);return d.lengt
 function verwerkLive(w,raw){if(raw.endTime!==w.einde||!raw.state)return;
  const ons=raw.clan.tag===w.clan.tag?raw.clan:raw.opponent,zij=ons===raw.clan?raw.opponent:raw.clan,per=raw.attacksPerMember||w.perLid||1,grootte=raw.teamSize||w.grootte;
  const leden=[...(ons.members||[])].sort((a,b)=>(a.mapPosition||99)-(b.mapPosition||99)),mijn=leden.flatMap(m=>m.attacks||[]),hun=(zij.members||[]).flatMap(m=>m.attacks||[]);
- const kaart=l=>l.map(a=>({doel:a.defenderTag,sterren:a.stars,procent:a.destructionPercentage}));
+ const kaart=l=>l.map(a=>({doel:a.defenderTag,sterren:a.stars,procent:a.destructionPercentage})),hunLeden=Object.fromEntries((zij.members||[]).map(m=>[m.tag,m]));
+ const verdVan=tag=>hun.filter(a=>a.defenderTag===tag).sort((x,y)=>y.stars-x.stars||y.destructionPercentage-x.destructionPercentage).map(a=>({sterren:a.stars,procent:a.destructionPercentage,door:hunLeden[a.attackerTag]?.name,th:hunLeden[a.attackerTag]?.townhallLevel}));
  Object.assign(w.clan,{stars:ons.stars,destructionPercentage:ons.destructionPercentage,aanvallen:ons.attacks??mijn.length});
  Object.assign(w.tegenstander,{stars:zij.stars,destructionPercentage:zij.destructionPercentage,aanvallen:zij.attacks??hun.length});
  Object.assign(w,{status:raw.state,perLid:per,gebruikt:mijn.length,totaal:leden.length*per,gemTijdOns:gemDuur(mijn),gemTijdZij:gemDuur(hun),
   maxOns:maxSterren(ons.stars||0,Math.max(0,grootte*per-mijn.length),kaart(mijn),grootte),maxZij:maxSterren(zij.stars||0,Math.max(0,grootte*per-hun.length),kaart(hun),grootte),maxPctOns:maxProcent(kaart(mijn),Math.max(0,grootte*per-mijn.length),grootte),maxPctZij:maxProcent(kaart(hun),Math.max(0,grootte*per-hun.length),grootte),
-  leden:leden.map(m=>({tag:m.tag,naam:m.name,pos:m.mapPosition,aanvallen:(m.attacks||[]).map(a=>({sterren:a.stars,procent:a.destructionPercentage}))})),
+  leden:leden.map(m=>({tag:m.tag,naam:m.name,pos:m.mapPosition,aanvallen:(m.attacks||[]).map(a=>({sterren:a.stars,procent:a.destructionPercentage})),verd:verdVan(m.tag)})),
   open:leden.filter(m=>(m.attacks||[]).length<per).map(m=>({naam:m.name,over:per-(m.attacks||[]).length}))})}
 async function cwlLive(){const clans=D.clans.filter(c=>c.cwl?.rondes);if(!clans.length)return false;
  const tags=[...new Set(clans.flatMap(c=>Object.values(c.cwl.rondes).flatMap(r=>Object.entries(r).filter(([,w])=>w.status!=="warEnded").map(([t])=>t))))];
@@ -920,6 +935,7 @@ addEventListener("click",async e=>{const mk=e.target.closest("[data-meer]"),nv=$
  const oj=e.target.closest("[data-oj]");if(oj){oorlogJaar=oj.dataset.oj;oorlogAantal=100;render();return}
  const of=e.target.closest("[data-of]");if(of){oorlogClan=of.dataset.of;oorlogAantal=100;render();return}
  const os=e.target.closest("[data-os]");if(os){oorlogSoort=os.dataset.os;oorlogAantal=100;render();return}
+ const lm=e.target.closest("[data-lijstm]");if(lm){const f=document.querySelector(".front")?.scrollLeft;lijstModus[lm.dataset.lijstm]=lm.dataset.m;render();document.querySelector(".front").scrollLeft=f;return}
  const rd=e.target.closest("[data-ronde]");if(rd){const f=document.querySelector(".front")?.scrollLeft;rondeKeuze[rd.dataset.kclan]=+rd.dataset.ronde;render();document.querySelector(".front").scrollLeft=f;return}
  const cv=e.target.closest("[data-cwlv]");if(cv){cwlWeergave[cv.dataset.cwlv]=cv.dataset.w;$("inhoud").innerHTML=overzichtView();return}
  const cr=e.target.closest("[data-cwlr]");if(cr){cwlRonde[cr.dataset.cwlr]=+cr.dataset.n;$("inhoud").innerHTML=overzichtView();return}

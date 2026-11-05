@@ -218,7 +218,7 @@ def normalize_war(raw, war_id, kind, clan_tag, season=None):
             for m in opponent.get("members", [])
         },
         "tegenAanvallen": [
-            {"sterren": a["stars"], "doel": a["defenderTag"], "duur": a.get("duration")}
+            {"sterren": a["stars"], "procent": a.get("destructionPercentage"), "doel": a["defenderTag"], "aanvaller": a.get("attackerTag"), "volgorde": a.get("order"), "duur": a.get("duration")}
             for m in opponent.get("members", []) for a in m.get("attacks", [])
         ],
         "leden": members,
@@ -260,7 +260,9 @@ def collect_wars(clan):
                 continue
             file_id = war_tag.strip("#")
             cached = read_json(CWL / (file_id + ".json"), None)
-            if not cached or cached["status"] != "warEnded":
+            eigen = read_json(WARS / f"cwl-{safe_tag}-{file_id}.json", None)
+            herstel = eigen and any("procent" not in a for a in eigen.get("tegenAanvallen", []))  # Oudere rondes misten dit veld.
+            if not cached or cached["status"] != "warEnded" or herstel:
                 war = get("/clanwarleagues/wars/" + tag_url(war_tag))
                 if not war:
                     continue
@@ -1057,12 +1059,28 @@ def average_duration(attacks):
     return round(sum(durations) / len(durations)) if durations else None
 
 
+def verdedigingen(war, tag):
+    """Aanvallen op één lid, beste eerst. Alleen recente oorlogen, want de Status-pagina toont niet meer."""
+    namen = war.get("tegenLeden") or {}
+    rijen = sorted(
+        (a for a in war["tegenAanvallen"] if a.get("doel") == tag),
+        key=lambda a: (a.get("sterren") or 0, a.get("procent") or 0), reverse=True,
+    )
+    return [
+        {"sterren": a["sterren"], "procent": a.get("procent"), "door": (namen.get(a.get("aanvaller")) or {}).get("naam"), "th": (namen.get(a.get("aanvaller")) or {}).get("th")}
+        for a in rijen
+    ]
+
+
 def war_summary(war):
     members = war["leden"]
     per_member = war["aanvallenPerLid"]
     size = war.get("grootte") or len(members)
     our_attacks = [a for m in members for a in m["aanvallen"]]
     ours, theirs = war["clan"], war["tegenstander"]
+    einde = war.get("einde")
+    recent = war["status"] != "warEnded" or not einde or (datetime.now(timezone.utc) - parse_time(einde)).days < 14
+    toon_verd = "tegenAanvallen" in war and recent
     limits = {}
     if "tegenAanvallen" in war:
         total = size * per_member
@@ -1082,7 +1100,11 @@ def war_summary(war):
         "gemTijdOns": average_duration(our_attacks),
         "gemTijdZij": average_duration(war.get("tegenAanvallen", [])),
         "leden": [
-            {"tag": m["tag"], "naam": m["naam"], "pos": m.get("pos"), "aanvallen": [{"sterren": a["sterren"], "procent": a["procent"]} for a in m["aanvallen"]]}
+            {
+                "tag": m["tag"], "naam": m["naam"], "pos": m.get("pos"),
+                "aanvallen": [{"sterren": a["sterren"], "procent": a["procent"]} for a in m["aanvallen"]],
+                **({"verd": verdedigingen(war, m["tag"])} if toon_verd else {}),
+            }
             for m in sorted(members, key=lambda m: m.get("pos") or 99)
         ],
         "status": "onvolledig" if war["status"] != "warEnded" and war_is_final(war) else war["status"],
