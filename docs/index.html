@@ -485,7 +485,7 @@ function oordeel(w){const a=w.clan.stars||0,b=w.tegenstander.stars||0;
  if(w.totaal&&w.clan.aanvallen>=w.totaal&&w.tegenstander.aanvallen>=w.totaal){const x=w.clan.destructionPercentage,y=w.tegenstander.destructionPercentage;if(a>b||(a===b&&x>y))return ["win","Gewonnen"];if(a<b||(a===b&&x<y))return ["ver","Verloren"];return ["open","Gelijkspel"]}
  if(w.totaal&&w.clan.aanvallen>=w.totaal&&(a<b||(a===b&&w.clan.destructionPercentage<w.tegenstander.destructionPercentage)))return ["ver","Verloren"];
  const pa=w.clan.destructionPercentage??0,pb=w.tegenstander.destructionPercentage??0;
- if(a>w.maxZij||(a===w.maxZij&&w.maxPctZij!=null&&pa>w.maxPctZij+.02))return ["win","Winst is binnen"];
+ if(a>w.maxZij||(a===w.maxZij&&w.maxPctZij!=null&&pa>w.maxPctZij+.02))return ["win",w.totaal&&w.clan.aanvallen>=w.totaal?"Gewonnen":"Winst is binnen"];
  if(w.maxOns<b||(w.maxOns===b&&w.maxPctOns!=null&&pb>w.maxPctOns+.02))return ["ver","Niet meer te winnen"];
  return ["open","Nog niet beslist"]}
 const pct=v=>v==null?"–":`${(+v).toFixed(2).replace(".",",")}%`;
