@@ -1,0 +1,27 @@
+name: Tijdelijke controle
+on: workflow_dispatch
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  deployments: read
+jobs:
+  c:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          R: ${{ github.repository }}
+        run: |
+          gh api repos/$R/pages --jq '{status,build_type,source}' || true
+          for s in 20e6e1bbde38515ee9dd99468a9683405c5c4f4d 69bc1cae 7ee228bec82a1c651153d7937b984450e3facc5f; do
+            echo "== $s"; gh api repos/$R/pages/deployments/$s || true
+          done
+          gh api repos/$R/pages/builds/latest --jq '{status,commit,created_at,error}' || true
+          echo "== annuleren"
+          gh api -X POST repos/$R/pages/deployments/20e6e1bbde38515ee9dd99468a9683405c5c4f4d/cancel || true
+          sleep 20
+          gh api repos/$R/pages/deployments/20e6e1bbde38515ee9dd99468a9683405c5c4f4d || true
+          echo "== nieuwe build aanvragen"
+          gh api -X POST repos/$R/pages/builds || true
