@@ -11,7 +11,7 @@ jobs:
           COC_API_KEY: ${{ secrets.COC_API_KEY }}
         run: |
           cat > /tmp/p.py <<'PY'
-          import json,os,urllib.request,urllib.parse,collections
+          import json,os,urllib.request,urllib.parse
           B="https://cocproxy.royaleapi.dev/v1"
           q=lambda t:urllib.parse.quote(t,safe="")
           def g(u):
@@ -20,44 +20,14 @@ jobs:
                   r=urllib.request.urlopen(urllib.request.Request(B+u,headers=h),timeout=60);return r.status,json.load(r)
               except urllib.error.HTTPError as e: return e.code,e.read()[:200]
               except Exception as e: return 0,str(e)[:120]
-          L=json.load(open("docs/data/latest.json"));R=json.load(open("docs/data/ranked.json"))["weken"];C=json.load(open("config.json"))
-          s,t=g("/leaguetiers");TI={x["id"]:x["name"] for x in t["items"]}
-          print("tiers",len(TI),[TI[k] for k in sorted(TI)][:40])
-          leden=[p for p in L["players"] if p.get("inClan")]
-          st=collections.Counter();lim=collections.defaultdict(collections.Counter);vb=[];pl=[];geen=0
-          eerste=True
-          for p in leden:
-              s,h=g("/players/"+q(p["tag"])+"/leaguehistory")
-              if s!=200: st["fout"]+=1;continue
-              if eerste:
-                  s2,r=g("/players/"+q(p["tag"]))
-                  gt,si=r.get("currentLeagueGroupTag"),r.get("currentLeagueSeasonId")
-                  for u in ["/leaguegroup/"+q(gt)+"/"+str(si)+"?playerTag="+q(p["tag"]),"/leaguegroup/"+q(gt)+"/"+str(si)+"/"+q(p["tag"])]:
-                      s3,d=g(u);print("groeproute",u[:60],s3,list(d.keys()) if isinstance(d,dict) else d)
-                      if isinstance(d,dict):
-                          for k,v in d.items(): print("  ",k,type(v).__name__,len(v) if hasattr(v,"__len__") else v,json.dumps(v)[:420])
-                  eerste=False
-              for it in h.get("items",[]):
-                  sid=str(it["leagueSeasonId"]);nm=TI.get(it["leagueTierId"],str(it["leagueTierId"]))
-                  lim[nm.rsplit(" ",1)[0] if nm[-1].isdigit() else nm][it["maxBattles"]]+=1
-                  na=it["attackWins"]+it["attackLosses"]
-                  x=R.get(sid,{}).get("spelers",{}).get(p["tag"])
-                  if x is None:
-                      st["week-niet-bewaard-"+sid]+=1;continue
-                  n=len(x.get("aanv") or {});v=len(x.get("verd") or {})
-                  st["vergeleken-"+sid]+=1
-                  if n==na: st["aanv-gelijk"]+=1
-                  else:
-                      st["aanv-verschil"]+=1
-                      if len(vb)<25: vb.append((p["naam"],sid,"api",na,"wij",n,"vol",x.get("volledig"),nm))
-                  nd=it["defenseWins"]+it["defenseLosses"]
-                  st["verd-gelijk" if nd==v else "verd-verschil"]+=1
-                  if x.get("trofeeen") is not None and x.get("trofeeen")!=it["leagueTrophies"]: st["trofee-verschil"]+=1
-                  if x.get("league") and x["league"]!=nm.replace(" League",""): st["league-verschil"]+=1
-              pl.append(len(h.get("items",[])))
-          print(sorted(st.items()));print("voorbeelden",vb)
-          print("maxBattles",{k:dict(v) for k,v in lim.items()})
-          print("weken per speler",collections.Counter(pl))
+          s,c=g("/clans/"+q("#2RGYGLVC0"));m=c["memberList"][0]["tag"]
+          s,p=g("/players/"+q(m));gt,si,gv,sv=p["currentLeagueGroupTag"],p["currentLeagueSeasonId"],p["previousLeagueGroupTag"],p["previousLeagueSeasonId"]
+          print(gt,si,gv,sv)
+          for u in ["/leaguegroup/"+q(gt)+"/"+str(si)+"?playerTag="+q(m),"/leaguegroup/"+q(gv)+"/"+str(sv)+"?playerTag="+q(m)]:
+              s,d=g(u);print(u[:50],s,list(d.keys()) if isinstance(d,dict) else d)
+              if isinstance(d,dict):
+                  for k,v in d.items():
+                      print(" ",k,type(v).__name__,len(v) if hasattr(v,"__len__") else v,json.dumps(v)[:600])
           print("EINDE")
           PY
           python3 /tmp/p.py
