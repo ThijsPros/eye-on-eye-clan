@@ -353,6 +353,8 @@ def cwl_table(group, results):
                 row["vernietigd"] = round(row["vernietigd"] + own["procent"] * (war.get("grootte") or 0), 1)
                 row["aanvallen"] += own.get("aanvallen", 0)
                 row["verdeling"] = [x + y for x, y in zip(row["verdeling"], own.get("verdeling", [0, 0, 0, 0]))]
+                if war.get("status") == "warEnded":  # Een gemiste aanval telt als 0 sterren.
+                    row["verdeling"][3] += max(0, (war.get("grootte") or 0) - own.get("aanvallen", 0))
                 row["winst"] += won
                 row["verlies"] += lost
                 row["gelijk"] += tied
