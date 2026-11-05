@@ -22,26 +22,32 @@ jobs:
               except urllib.error.HTTPError as e: return e.code,e.read()[:200]
               except Exception as e: return 0,str(e)[:120]
           for t in ("#PYQ2RLCQ","#2RGYGLVC0"):
-              s,w=g(K+"/v2/clan/"+q(t)+"/wars?limit=2000",False)
-              print(t,"v2",s,len(w) if isinstance(w,list) else str(w)[:200], list(w.keys()) if isinstance(w,dict) else "")
-              items=w if isinstance(w,list) else (w.get("items") or []) if isinstance(w,dict) else []
-              e=sorted(x.get("endTime","")[:13] for x in items if x.get("endTime","")>="20261010")
-              print(" v2 einden >=10-10",e)
               s,o=g(K+"/war/"+q(t)+"/previous?limit=2000",False)
-              print(" prev",s,len(o) if isinstance(o,list) else str(o)[:200])
-              ol=o if isinstance(o,list) else []
-              r=[x for x in ol if x.get("endTime","")[:8] in("20261101","20261030","20260901")]
-              for x in r[:3]:
+              ol=o.get("items",[]) if isinstance(o,dict) else o
+              print(t,"prev",s,len(ol),"keys",list(o.keys()) if isinstance(o,dict) else "")
+              e=[x.get("endTime","")[:13] for x in ol]
+              print(" hoogste",sorted(e)[-14:])
+              print(" per maand",sorted(collections.Counter(x[:6] for x in e if x>="202606").items()))
+              for x in [y for y in ol if y.get("endTime","")[:8] in("20261101","20261030","20260901","20261020")][:3]:
                   c=x["clan"] if x["clan"].get("tag")==t else x["opponent"]
-                  print("  ",x.get("endTime"),"keys",sorted(x.keys()),"clankeys",sorted(c.keys()),"leden",len(c.get("members",[])),"aanv",sum(len(m.get("attacks") or []) for m in c.get("members",[])), "tag" ,x.get("tag"),"state",x.get("state"),"prep",x.get("preparationStartTime"),"voorbeeldlid",json.dumps((c.get("members") or [{}])[0])[:300])
-              print(" prev leden per maand",collections.Counter((x.get("endTime","")[:6],bool((x["clan"] if x["clan"].get("tag")==t else x["opponent"]).get("members"))) for x in ol if x.get("endTime","")>="202606"))
-          s,c=g(B+"/clans/"+q("#PYQ2RLCQ"));m=c["memberList"][:30]
-          s,p=g(B+"/players/"+q(m[0]["tag"]))
-          g1=p.get("currentLeagueGroupTag");gv=p.get("previousLeagueGroupTag");si=p.get("currentLeagueSeasonId");print("groep",g1,gv,si,p.get("previousLeagueSeasonId"),"lt",p.get("leagueTier"),"wp",p.get("warPreference"),"lbl",p.get("labels"),"ph",str(p.get("playerHouse"))[:100])
-          for u in ["/leaguegroup/"+q(str(g1)),"/leaguegroups/"+q(str(g1)),"/leagueGroups/"+q(str(g1)),"/league-groups/"+q(str(g1)),"/leaguegroup/"+q(str(g1))+"/"+str(si),"/leaguetiers","/leagues","/players/"+q(m[0]["tag"])+"/leaguehistory","/players/"+q(m[0]["tag"])+"/league","/leaguehistory/"+q(m[0]["tag"])]:
-              s,d=g(B+u);print(u[:40],s,str(d)[:260])
-          for u in ["/v2/league/group/"+q(str(g1)),"/v2/leagues/group/"+q(str(g1)),"/v2/player/"+q(m[0]["tag"])+"/league/history","/v2/players/"+q(m[0]["tag"])+"/league/history"]:
-              s,d=g(K+u,False);print("CK",u[:50],s,str(d)[:260])
+                  print("  ",x.get("endTime"),"clankeys",sorted(c.keys()),"leden",len(c.get("members",[])),"aanv",sum(len(m.get("attacks") or []) for m in c.get("members",[])),"tag",x.get("tag"),x.get("state"))
+              s,w=g(K+"/v2/clan/"+q(t)+"/wars?limit=2000",False)
+              il=w.get("items",[]) if isinstance(w,dict) else w
+              print(" v2 per maand",sorted(collections.Counter(x.get("endTime","")[:6] for x in il if x.get("endTime","")>="202606").items()),"totaal",len(il))
+              s,w=g(K+"/v2/clan/"+q(t)+"/wars?limit=500&after=20261020T000000.000Z",False);print(" v2 after",s,str(w)[:120])
+          s,c=g(B+"/clans/"+q("#2RGYGLVC0"));m=c["memberList"]
+          n=0
+          for x in m[:6]:
+              s,p=g(B+"/players/"+q(x["tag"]));print(x["name"],p.get("currentLeagueGroupTag"),p.get("currentLeagueSeasonId"),p.get("previousLeagueGroupTag"),p.get("previousLeagueSeasonId"),(p.get("leagueTier") or {}).get("name"))
+              if not n and p.get("previousLeagueGroupTag") and p.get("previousLeagueGroupTag")!="#0":
+                  n=1
+                  s,d=g(B+"/leaguegroup/"+q(p["previousLeagueGroupTag"])+"/"+str(p["previousLeagueSeasonId"]));print("groep",s,list(d.keys()) if isinstance(d,dict) else d)
+                  if isinstance(d,dict):
+                      for k,v in d.items():
+                          print("  ",k,type(v).__name__,(len(v) if hasattr(v,"__len__") else v),json.dumps(v)[:500])
+              if p.get("currentLeagueGroupTag") not in (None,"#0") and n<2:
+                  n=2;s,d=g(B+"/leaguegroup/"+q(p["currentLeagueGroupTag"])+"/"+str(p["currentLeagueSeasonId"]));print("huidig",s,str(d)[:700])
+              s,h=g(B+"/players/"+q(x["tag"])+"/leaguehistory");print(" hist",s,len(h.get("items",[])) if isinstance(h,dict) else h,json.dumps((h.get("items") or [None])[:2])[:520] if isinstance(h,dict) else "")
           print("EINDE")
           PY
           python3 /tmp/p.py
