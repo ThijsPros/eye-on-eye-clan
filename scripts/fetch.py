@@ -811,7 +811,7 @@ def ranked_tier(item, tiers):
 def ranked_logregel(rijen):
     uit = {}
     for r in rijen or []:
-        moment = int(datetime.strptime(r["creationTime"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+        moment = int(datetime.strptime(r["creationTime"][:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp())
         uit[str(moment)] = [r.get("stars", 0), r.get("destructionPercentage", 0), r.get("trophies", 0)]
     return uit
 
@@ -886,7 +886,8 @@ def ranked_officieel(players, raws, leden, clan_tags):
                     plek = item.get("placement") or 0
                     regel["zone"] = "op" if op and plek and plek <= op else "neer" if neer and plek > 100 - neer else ""
                 gehaald[tag] = week_nu
-        except ApiError:
+        except (ApiError, KeyError, TypeError, ValueError) as fout:
+            print(f"Ranked overgeslagen voor {tag}: {fout}")  # Nooit de hele ronde laten stoppen.
             continue
         time.sleep(0.05)
     ranked_legend(opslag, leden)
@@ -905,8 +906,8 @@ def ranked_legend(opslag, leden):
             if rijen:
                 eigen = {r["tag"]: [r.get("rank"), r.get("trophies")] for r in rijen if r.get("tag") in leden}
                 lijst[seizoen] = {"grens": rijen[-1].get("trophies"), "laatsteRang": rijen[-1].get("rank"), "spelers": eigen}
-    except ApiError:
-        pass
+    except (ApiError, KeyError, TypeError, ValueError) as fout:
+        print(f"Legend-ranglijst overgeslagen: {fout}")
 
 
 def activiteit(players, clan_tags):
