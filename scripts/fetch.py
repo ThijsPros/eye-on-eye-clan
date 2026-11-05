@@ -787,6 +787,179 @@ def ranked_bijwerken(players, raws, leden, clan_tags):
     write_json(pad, opslag)
 
 
+def ranked_zone(lgn):
+    """Aantal promotie- en degradatieplekken in een groep van 100. Legend III en II vast, de rest geschat."""
+    if lgn == 34:
+        return 5, 15
+    if lgn == 35:
+        return 3, 15
+    for van, tot, op, neer in CONFIG["ranked_zones"]:
+        if van <= (lgn or 0) <= tot:
+            return op, neer
+    return None, None
+
+
+def ranked_tier(item, tiers):
+    """League uit leaguehistory in dezelfde vorm als bij de spelers."""
+    naam = tiers.get(item.get("leagueTierId"), "")
+    nummer = naam.rsplit(" ", 1)[-1]
+    if nummer.isdigit():
+        return naam.replace(" League", ""), int(nummer)
+    return naam, {"Legend III": 34, "Legend II": 35, "Legend I": 36}.get(naam, 0)
+
+
+def ranked_logregel(rijen):
+    uit = {}
+    for r in rijen or []:
+        moment = int(datetime.strptime(r["creationTime"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+        uit[str(moment)] = [r.get("stars", 0), r.get("destructionPercentage", 0), r.get("trophies", 0)]
+    return uit
+
+
+def ranked_groep(regel, data, tag, lgn):
+    """Plek, tellingen en logs uit de officiële groep. Logs worden aangevuld, nooit vervangen."""
+    leden = data.get("members") or []
+    plek = next((i for i, m in enumerate(leden) if m.get("playerTag") == tag), None)
+    if plek is None:
+        return False
+    rij = leden[plek]
+    op, neer = ranked_zone(lgn)
+    regel.update(plek=plek + 1, grootte=len(leden), trofeeen=rij.get("leagueTrophies"),
+                 ao=rij.get("attackWinCount", 0) + rij.get("attackLoseCount", 0),
+                 vo=rij.get("defenseWinCount", 0) + rij.get("defenseLoseCount", 0))
+    if op and op <= len(leden):
+        regel["grensOp"] = leden[op - 1].get("leagueTrophies")
+        regel["zone"] = "op" if plek < op else ""
+    if neer and len(leden) > neer:
+        regel["grensNeer"] = leden[len(leden) - neer - 1].get("leagueTrophies")
+        if plek >= len(leden) - neer:
+            regel["zone"] = "neer"
+    regel.setdefault("logA", {}).update(ranked_logregel(data.get("attackLogs")))
+    regel.setdefault("logV", {}).update(ranked_logregel(data.get("defenseLogs")))
+    return True
+
+
+def ranked_officieel(players, raws, leden, clan_tags):
+    """Groepsplek, eindplaats en volledige logs uit de officiële API."""
+    pad = DATA / "ranked.json"
+    opslag = read_json(pad, {"weken": {}})
+    weken = opslag["weken"]
+    nu = int(NOW.timestamp())
+    week_nu = RANKED_START + (nu - RANKED_START) // RANKED_WEEK * RANKED_WEEK
+    try:
+        tiers = {t["id"]: t["name"] for t in (get("/leaguetiers") or {}).get("items", [])}
+    except ApiError:
+        tiers = {}
+    gehaald = opslag.setdefault("histWeek", {})
+    for tag in leden:
+        if tag not in raws or players[tag].get("clanTag") not in clan_tags:
+            continue
+        raw, player = raws[tag], players[tag]
+        try:
+            for groep, seizoen, klaar in ((raw.get("currentLeagueGroupTag"), raw.get("currentLeagueSeasonId"), False),
+                                          (raw.get("previousLeagueGroupTag"), raw.get("previousLeagueSeasonId"), True)):
+                if not groep or groep == "#0" or not seizoen or int(seizoen) < week_nu - RANKED_WEEK:
+                    continue
+                regel = weken.setdefault(str(seizoen), {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
+                if klaar and regel.get("eindGroep"):
+                    continue
+                data = get(f"/leaguegroup/{tag_url(groep)}/{seizoen}?playerTag={tag_url(tag)}")
+                if data and ranked_groep(regel, data, tag, regel.get("lgn") or player["lgn"]):
+                    regel.setdefault("naam", player["naam"])
+                    regel.setdefault("clan", player.get("clanTag"))
+                    if klaar:
+                        regel["eindGroep"] = True
+            if tiers and gehaald.get(tag) != week_nu:
+                for item in (get(f"/players/{tag_url(tag)}/leaguehistory") or {}).get("items", []):
+                    league, lgn = ranked_tier(item, tiers)
+                    if lgn == 36 or (item.get("maxBattles") or 0) > 100:
+                        continue  # Legend I is een toernooi van vier weken; zie ranked_legend.
+                    regel = weken.setdefault(str(item["leagueSeasonId"]), {"spelers": {}})["spelers"].setdefault(tag, {"aanv": {}})
+                    regel.update(plek=item.get("placement"), trofeeen=item.get("leagueTrophies"), maxB=item.get("maxBattles"),
+                                 ao=item.get("attackWins", 0) + item.get("attackLosses", 0),
+                                 vo=item.get("defenseWins", 0) + item.get("defenseLosses", 0), verdSter=item.get("defenseStars", 0),
+                                 league=league, lgn=lgn or None, grootte=regel.get("grootte", 100))
+                    regel.setdefault("naam", player["naam"])
+                    regel.setdefault("clan", player.get("clanTag"))
+                    regel.setdefault("lgnStart", lgn or None)
+                    op, neer = ranked_zone(lgn)
+                    plek = item.get("placement") or 0
+                    regel["zone"] = "op" if op and plek and plek <= op else "neer" if neer and plek > 100 - neer else ""
+                gehaald[tag] = week_nu
+        except ApiError:
+            continue
+        time.sleep(0.05)
+    ranked_legend(opslag, leden)
+    write_json(pad, opslag)
+
+
+def ranked_legend(opslag, leden):
+    """Eindrang per Legend I-toernooi en de trofeeën op rang 10.000. Eén keer per toernooi."""
+    lijst = opslag.setdefault("legend", {})
+    try:
+        seizoenen = [s["id"] for s in (get("/leagues/29000022/seasons") or {}).get("items", []) if str(s.get("id", "")).startswith("v2-")][-2:]
+        for seizoen in seizoenen:
+            if seizoen in lijst:
+                continue
+            rijen = (get(f"/leagues/29000022/seasons/{urllib.parse.quote(seizoen, safe='')}?limit=10000") or {}).get("items", [])
+            if rijen:
+                eigen = {r["tag"]: [r.get("rank"), r.get("trophies")] for r in rijen if r.get("tag") in leden}
+                lijst[seizoen] = {"grens": rijen[-1].get("trophies"), "laatsteRang": rijen[-1].get("rank"), "spelers": eigen}
+    except ApiError:
+        pass
+
+
+def activiteit(players, clan_tags):
+    """Vijf signalen per lid. None betekent dat het signaal niet te meten is."""
+    weken = read_json(DATA / "ranked.json", {"weken": {}})["weken"]
+    nu = int(NOW.timestamp())
+    week = RANKED_START + (nu - RANKED_START) // RANKED_WEEK * RANKED_WEEK
+    roof = read_json(DATA / "roof.json", {"weekenden": {}})["weekenden"]
+    laatste = {}
+    for w in roof.values():
+        if w.get("status") == "ended" and w.get("leden") and w["start"] > laatste.get(w["clan"], {}).get("start", ""):
+            laatste[w["clan"]] = w
+    edities = read_json(DATA / "clangames.json", {"edities": {}})["edities"]
+    editie = next((edities[m] for m in sorted(edities, reverse=True) if edities[m]["status"] in ("klaar", "actief")), None)
+    def tel(tag, w):
+        r = weken.get(str(w), {}).get("spelers", {}).get(tag) or {}
+        return r["ao"] if r.get("ao") is not None else len(r.get("aanv") or {})
+    for tag, p in players.items():
+        if p.get("clanTag") not in clan_tags or not p.get("inClan", True):
+            continue
+        cw = p.get("cw") or {}
+        ranked = [tel(tag, week), tel(tag, week - RANKED_WEEK)]
+        w = laatste.get(p["clanTag"])
+        roofa = None if not w else next((m.get("aanv") or 0 for m in w["leden"] if m["tag"] == tag), 0)
+        games = None
+        if editie and tag in editie.get("stand", {}):
+            games = max(0, editie["stand"][tag] - editie["basis"].get(tag, editie["stand"][tag]))
+        don = p.get("don") or 0
+        tekens = [(cw.get("aanv") or 0) > 0, sum(ranked) > 0, None if roofa is None else roofa > 0,
+                  None if games is None else games > 0, True if don else (None if NOW.day < 7 else False)]
+        p["act"] = {"o": cw.get("aanv") or 0, "r": ranked, "w": roofa, "g": games, "d": don, "t": tekens,
+                    "s": sum(1 for x in tekens if x), "n": sum(1 for x in tekens if x is not None)}
+
+
+def dekking_bepalen(archive, wars):
+    """Markeert oorlogen zonder aanvalsdetail en telt ze per clan over het venster."""
+    if not wars:
+        return {}
+    eerste = wars[0]["start"][:8]
+    grens = (NOW - timedelta(days=CONFIG["venster_dagen"])).strftime("%Y%m%d")
+    dekking = {}
+    for tag, rows in archive.items():
+        eigen = [(w["soort"], parse_time(w["einde"])) for w in wars if w["clan"].get("tag") == tag and w.get("einde") and w.get("leden")]
+        for row in rows:
+            if row["einde"][:8] < eerste:
+                continue
+            einde = parse_time(row["einde"])
+            row["detail"] = any(soort == row["soort"] and abs((moment - einde).total_seconds()) < 6 * 3600 for soort, moment in eigen)
+        recent = [r for r in rows if r["start"][:8] >= grens and "detail" in r]
+        dekking[tag] = {"oorlogen": len(recent), "metDetail": sum(1 for r in recent if r["detail"])}
+    return dekking
+
+
 def records_bijwerken(clans):
     """Ranglijsten voor Nederland en de wereld, plus de eigen records. Vier keer per dag."""
     pad = DATA / "records.json"
@@ -1104,6 +1277,7 @@ def main():
         player["s"] = [series.get(m) for m in labels]
         player["cw"] = stats.get(tag)
         output.append(player)
+    activiteit({p["tag"]: p for p in output}, clan_tags)
 
     first_war = parse_time(wars[0]["start"]) if wars else None
     window_full = bool(first_war and first_war <= NOW - timedelta(days=CONFIG["venster_dagen"]))
@@ -1113,6 +1287,7 @@ def main():
     roof_bijwerken(clans)
     records_bijwerken(clans)
     ranked_bijwerken(players, raws, leden, clan_tags)
+    ranked_officieel(players, raws, leden, clan_tags)
     catalogus_bijwerken(raws)
     games_bijwerken(players, clan_tags)
     maand_dagen = CONFIG["maand_venster_dagen"]
@@ -1147,6 +1322,7 @@ def main():
                 continue
             unique.append(row)
         archive[tag] = unique
+    dekking = dekking_bepalen(archive, wars)
     write_json(DATA / "archief.json", archive)
     write_json(DATA / "latest.json", {
         "bijgewerkt": NOW.isoformat(timespec="seconds"),
@@ -1160,6 +1336,7 @@ def main():
         "cwlLeague": history.get("cwlLeague", {}),
         "rankedLimiet": CONFIG["ranked_limieten"],
         "rankedVrij": CONFIG["ranked_veilige_weken"],
+        "dekking": dekking,
         "clans": clan_status,
         "players": output,
         "oorlogen": summaries,
