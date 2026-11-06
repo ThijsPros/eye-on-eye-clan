@@ -574,8 +574,8 @@ function muur(){const lijst=[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0));return
  <div class="chips kolomspring">${lijst.map((c,i)=>`<button class="chip" data-kolom="${i}" aria-pressed="${i===0}">${schild(c.nr,20)}Clan ${["","I","II","III","IV"][c.nr]??c.nr}</button>`).join("")}</div>
  <div class="front">${[...D.clans].sort((a,b)=>(a.nr||0)-(b.nr||0)).map(kolom).join("")}</div>`}
 
-// Promotie en degradatie per league: Clash of Clans Wiki, vanaf Master volgens ClashSpot. Legend is de hoogste league.
-function plekken(l){l=(l||"").replace(" League","");if(l==="Bronze III")return [3,0];if(l==="Bronze II"||l==="Bronze I")return [3,2];if(l==="Legend")return [0,2];if(/^(Master|Champion|Titan)/.test(l))return [1,2];return [2,2]}
+// Promotie en degradatie per league: Clash of Clans Wiki, vanaf Master volgens ClashSpot en Thijs (Master III: 2 omhoog). Legend is de hoogste league.
+function plekken(l){l=(l||"").replace(" League","");if(l==="Bronze III")return [3,0];if(l==="Bronze II"||l==="Bronze I")return [3,2];if(l==="Legend")return [0,2];if(l==="Master III")return [2,2];if(/^(Master|Champion|Titan)/.test(l))return [1,2];return [2,2]}
 function uitkomst(w,o,z){const n=w.grootte||0,klaar=w.status==="warEnded"||(n&&o.aanvallen>=n&&z.aanvallen>=n);
  if(klaar){if(o.sterren!==z.sterren)return o.sterren>z.sterren?"w":"v";if(o.procent!==z.procent)return o.procent>z.procent?"w":"v";return "g"}
  if(z.max!=null&&(o.sterren>z.max||(o.sterren===z.max&&z.maxPct!=null&&o.procent>z.maxPct+.02)))return "w";if(o.max!=null&&(z.sterren>o.max||(z.sterren===o.max&&o.maxPct!=null&&z.procent>o.maxPct+.02)))return "v";return "bezig"}
