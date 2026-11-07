@@ -679,8 +679,13 @@ def roof_bijwerken(clans):
     pad = DATA / "roof.json"
     opslag = read_json(pad, {"weekenden": {}})
     weekenden = opslag["weekenden"]
+    # Roofweekend alleen in de clans uit roof_indeling; leden van andere clans doen mee in de clan die daar staat.
+    indeling = CONFIG.get("roof_indeling") or {}
+    leden_per_clan = {c["tag"]: {m["tag"] for m in c.get("memberList", [])} for c in clans}
+    alle_leden = set().union(*leden_per_clan.values()) if leden_per_clan else set()
     for clan in clans:
         tag = clan["tag"]
+        verwacht = set().union(*(l for c, l in leden_per_clan.items() if indeling.get(c) == tag)) if indeling else leden_per_clan.get(tag, set())
         bekend = any(k.startswith(tag + "|") for k in weekenden)
         try:
             data = get(f"/clans/{tag_url(tag)}/capitalraidseasons?limit={8 if bekend else 100}") or {}
@@ -691,7 +696,10 @@ def roof_bijwerken(clans):
             oud = weekenden.get(sleutel, {})
             rooster = set(oud.get("rooster") or [])
             if w.get("state") == "ongoing":
-                rooster |= {m["tag"] for m in clan.get("memberList", [])}
+                if indeling and w["startTime"][:8] >= CONFIG.get("roof_indeling_vanaf", ""):
+                    rooster = verwacht | (rooster - alle_leden)  # Wie tijdens het weekend vertrok, blijft verwacht.
+                else:
+                    rooster |= {m["tag"] for m in clan.get("memberList", [])}
             weekenden[sleutel] = {
                 "clan": tag, "start": w["startTime"], "einde": w.get("endTime"), "status": w.get("state"),
                 "buit": w.get("capitalTotalLoot"), "raids": w.get("raidsCompleted"), "aanvallen": w.get("totalAttacks"),
@@ -937,8 +945,15 @@ def activiteit(players, clan_tags):
             continue
         cw = p.get("cw") or {}
         ranked = [tel(tag, week), tel(tag, week - RANKED_WEEK)]
-        w = laatste.get(p["clanTag"])
-        roofa = None if not w else next((m.get("aanv") or 0 for m in w["leden"] if m["tag"] == tag), 0)
+        indeling = CONFIG.get("roof_indeling") or {}
+        doel = indeling.get(p["clanTag"]) if indeling else p["clanTag"]
+        w = laatste.get(doel) if doel else None
+        if w and indeling and w["start"][:8] >= CONFIG.get("roof_indeling_vanaf", ""):
+            # Telt aanvallen in alle clans in dat weekend, want een lid kan in een andere clan meedoen.
+            roofa = sum(m.get("aanv") or 0 for x in roof.values() if x["start"] == w["start"] for m in x.get("leden", []) if m["tag"] == tag)
+        else:
+            w = laatste.get(p["clanTag"])
+            roofa = None if not w else next((m.get("aanv") or 0 for m in w["leden"] if m["tag"] == tag), 0)
         games = None
         if editie and tag in editie.get("stand", {}):
             games = max(0, editie["stand"][tag] - editie["basis"].get(tag, editie["stand"][tag]))
@@ -1361,6 +1376,8 @@ def main():
         "eersteOorlog": wars[0]["start"][:8] if wars else None,
         "grensAanvallen": CONFIG["grens_aanvallen"],
         "gamesDoel": CONFIG["clangames_doel"],
+        "roofIndeling": CONFIG.get("roof_indeling") or {},
+        "roofIndelingVanaf": CONFIG.get("roof_indeling_vanaf"),
         "cwlLeague": history.get("cwlLeague", {}),
         "rankedLimiet": CONFIG["ranked_limieten"],
         "rankedVrij": CONFIG["ranked_veilige_weken"],

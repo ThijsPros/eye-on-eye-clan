@@ -22,6 +22,8 @@
   "bij_ons_sinds": {},
   "maand_venster_dagen": 120,
   "clangames_doel": 4000,
+  "roof_indeling": {"#PYQ2RLCQ": "#PYQ2RLCQ", "#2RGYGLVC0": "#2RGYGLVC0", "#2JYY0809P": "#PYQ2RLCQ"},
+  "roof_indeling_vanaf": "20261106",
   "ranked_limieten": {
     "Skeleton": 6,
     "Barbarian": 6,
